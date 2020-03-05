@@ -1,5 +1,7 @@
 const path = require('path');
-
+const fs = require('fs');
+var mkdirp = require('mkdirp');
+var getDirName = require('path').dirname;
 const PATH_DELIMITER = '[\\\\/]'; // match 2 antislashes or one slash
 
 /**
@@ -56,6 +58,30 @@ const withTmInitializer = (transpileModules = []) => {
           );
         }
 
+        function writeFile(path, contents, cb) {
+          mkdirp(getDirName(path), function (err) {
+            if (err) return cb(err);
+
+            fs.writeFile(path, contents, cb);
+          });
+        }
+
+        // if (!fs.existsSync(path.join(options.dir, options.config.distDir, 'BUILD_ID'))) {
+        //   fs.writeFile(path.join(options.dir, options.config.distDir, 'BUILD_ID'), options.buildId, function(err) {
+        //     if (err) return console.log(err);
+        //
+        //   });
+        //
+        //
+        //   writeFile(path.join(options.dir, options.config.distDir, 'server','pages-manifest.json'), '{}', function(err) {
+        //     if (err) return console.log(err);
+        //   });
+        //   writeFile(path.join(options.dir, options.config.distDir,'prerender-manifest.json'), '{}', function(err) {
+        //     if (err) return console.log(err);
+        //   });
+        // }
+
+        // console.log(path.join(options.output.path);
         // Avoid Webpack to resolve transpiled modules path to their real path as
         // we want to test modules from node_modules only. If it was enabled,
         // modules in node_modules installed via symlink would then not be
@@ -75,38 +101,40 @@ const withTmInitializer = (transpileModules = []) => {
             };
           });
         }
-
+console.log(options.defaultLoaders.babel)
         // Add a rule to include and parse all modules (js & ts)
         config.module.rules.push({
           test: /\.+(js|jsx|ts|tsx)$/,
-          loader: options.defaultLoaders.babel,
-          include: includes
+          use: options.defaultLoaders.babel,
+          include: includes,
+          exclude: excludes
         });
 
         // Support CSS modules + global in node_modules
         // TODO ask Next.js maintainer to expose the css-loader via defaultLoaders
-        const nextCssLoaders = config.module.rules.find((rule) => typeof rule.oneOf === 'object');
-
-        // .module.css
-        if (nextCssLoaders) {
-          const nextCssLoader = nextCssLoaders.oneOf.find(
-            (rule) => rule.sideEffects === false && regexEqual(rule.test, /\.module\.css$/)
-          );
-
-          if (nextCssLoader) {
-            nextCssLoader.issuer.include = nextCssLoader.issuer.include.concat(includes);
-            nextCssLoader.issuer.exclude = excludes;
-          }
-
-          // Hack our way to disable errors on node_modules CSS modules
-          const nextErrorCssLoader = nextCssLoaders.oneOf.find(
-            (rule) => rule.use && rule.use.loader === 'error-loader' && regexEqual(rule.test, /\.module\.css$/)
-          );
-
-          if (nextErrorCssLoader) {
-            nextErrorCssLoader.exclude = includes;
-          }
-        }
+        // const nextCssLoaders = config.module.rules.find((rule) => typeof rule.oneOf === 'object');
+        // // .module.css
+        // if (nextCssLoaders) {
+        //   const nextCssLoader = nextCssLoaders.oneOf.find(
+        //     (rule) => rule.sideEffects === false && regexEqual(rule.test, /\.module\.css$/)
+        //   );
+        //
+        //   if (nextCssLoader) {
+        //     nextCssLoader.issuer = Array.isArray(nextCssLoader.issuer)
+        //       ? [nextCssLoader.issuer].concat(includes)
+        //       : includes;
+        //     // nextCssLoader.issuer.exclude = excludes;
+        //   }
+        //
+        //   // Hack our way to disable errors on node_modules CSS modules
+        //   const nextErrorCssLoader = nextCssLoaders.oneOf.find(
+        //     (rule) => rule.use && rule.use.loader === 'error-loader' && regexEqual(rule.test, /\.module\.css$/)
+        //   );
+        //
+        //   if (nextErrorCssLoader) {
+        //     nextErrorCssLoader.exclude = includes;
+        //   }
+        // }
 
         // Overload the Webpack config if it was already overloaded
         if (typeof nextConfig.webpack === 'function') {
@@ -119,15 +147,6 @@ const withTmInitializer = (transpileModules = []) => {
       // webpackDevMiddleware needs to be told to watch the changes in the
       // transpiled modules directories
       webpackDevMiddleware(config) {
-        // Replace /node_modules/ by the new exclude RegExp (including the modules
-        // that are going to be transpiled)
-        // https://github.com/zeit/next.js/blob/815f2e91386a0cd046c63cbec06e4666cff85971/packages/next/server/hot-reloader.js#L335
-        const ignored = config.watchOptions.ignored
-          .filter((regexp) => !regexEqual(regexp, /[\\/]node_modules[\\/]/))
-          .concat(excludes);
-
-        config.watchOptions.ignored = ignored;
-
         if (typeof nextConfig.webpackDevMiddleware === 'function') {
           return nextConfig.webpackDevMiddleware(config);
         }

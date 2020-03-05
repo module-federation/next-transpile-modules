@@ -1,6 +1,6 @@
 {
-  "name": "next-transpile-modules",
-  "version": "3.0.2",
+  "name": "@module-federation/next-transpile-modules",
+  "version": "3.0.2-beta.0",
   "main": "src/next-transpile-modules.js",
   "license": "MIT",
   "author": "Pierre de la Martinière <pierre.de.la.martiniere@gmail.com>",
@@ -15,12 +15,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/martpie/next-transpile-modules.git"
+    "url": "git+https://github.com/module-federation/next-transpile-modules.git"
   },
   "bugs": {
-    "url": "https://github.com/martpie/next-transpile-modules/issues"
+    "url": "https://github.com/module-federation/next-transpile-modules/issues"
   },
-  "homepage": "https://github.com/martpie/next-transpile-modules#readme",
+  "homepage": "https://github.com/module-federation/next-transpile-modules#readme",
   "keywords": [
     "next",
     "next.js",
@@ -50,7 +50,7 @@
     "jest-puppeteer": "^4.4.0",
     "prettier": "1.19.1",
     "prettier-eslint": "9.0.1",
-    "puppeteer": "^2.0.0",
+    "puppeteer": "^2.1.1",
     "rewire": "4.0.1"
   }
 }

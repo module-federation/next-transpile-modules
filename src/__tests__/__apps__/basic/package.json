@@ -12,7 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "lodash-es": "^4.17.15",
-    "next": "9.2.0",
+    "@module-federation/next": "^9.2.2-beta.10",
     "react": "^16.12.0",
     "react-dom": "^16.12.0",
     "shared": "file:../_shared",
