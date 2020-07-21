@@ -139,11 +139,9 @@ const withTmInitializer = (transpileModules = [], options = {}) => {
               rule.use &&
               rule.use.loader === 'error-loader' &&
               rule.use.options &&
-              (rule.use.options.reason ===
-                'CSS Modules \u001b[1mcannot\u001b[22m be imported from within \u001b[1mnode_modules\u001b[22m.\n' +
-                  'Read more: https://err.sh/next.js/css-modules-npm' ||
-                rule.use.options.reason ===
-                  'CSS Modules cannot be imported from within node_modules.\nRead more: https://err.sh/next.js/css-modules-npm')
+              rule.use.options.reason ===
+                'CSS Modules cannot be imported from within node_modules.\n' +
+              'Read more: https://err.sh/next.js/css-modules-npm',
           );
 
           if (nextErrorCssModuleLoader) {
@@ -155,11 +153,9 @@ const withTmInitializer = (transpileModules = [], options = {}) => {
               rule.use &&
               rule.use.loader === 'error-loader' &&
               rule.use.options &&
-              (rule.use.options.reason ===
-                'Global CSS \u001b[1mcannot\u001b[22m be imported from within \u001b[1mnode_modules\u001b[22m.\n' +
-                  'Read more: https://err.sh/next.js/css-npm' ||
-                rule.use.options.reason ===
-                  'Global CSS cannot be imported from within node_modules.\nRead more: https://err.sh/next.js/css-npm')
+              rule.use.options.reason ===
+                'Global CSS cannot be imported from files other than your Custom <App>. Please move all global CSS imports to pages/_app.js. Or convert the import to Component-Level CSS (CSS Modules).\n' +
+              'Read more: https://err.sh/next.js/css-global',
           );
 
           if (nextErrorCssGlobalLoader) {
