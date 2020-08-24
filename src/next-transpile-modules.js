@@ -187,6 +187,10 @@ const withTmInitializer = (modules = [], options = {}) => {
           `**node_modules/{${modules.map((mod) => `!(${mod})`).join(',')}}/**/*`,
         ];
 
+        if (isWebpack5) {
+          config.cache = false;
+        }
+
         // Overload the Webpack config if it was already overloaded
         if (typeof nextConfig.webpack === 'function') {
           return nextConfig.webpack(config, options);
