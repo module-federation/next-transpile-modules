@@ -168,7 +168,14 @@ const withTmInitializer = (transpileModules = [], options = {}) => {
         }
 
         if (isWebpack5) {
-          config.cache = false;
+          const managed = transpileModules.map((mod) => {
+            return path.dirname(require.resolve(mod));
+          });
+
+          config.cache = {
+            type: 'memory',
+            managedPaths: managed
+          };
         }
 
         // Overload the Webpack config if it was already overloaded
