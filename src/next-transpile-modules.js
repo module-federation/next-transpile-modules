@@ -167,6 +167,10 @@ const withTmInitializer = (transpileModules = [], options = {}) => {
           }
         }
 
+        if (isWebpack5) {
+          config.cache = false;
+        }
+
         // Overload the Webpack config if it was already overloaded
         if (typeof nextConfig.webpack === 'function') {
           return nextConfig.webpack(config, options);
@@ -183,7 +187,9 @@ const withTmInitializer = (transpileModules = [], options = {}) => {
         // https://github.com/zeit/next.js/blob/815f2e91386a0cd046c63cbec06e4666cff85971/packages/next/server/hot-reloader.js#L335
 
         const ignored = isWebpack5
-          ? config.watchOptions.ignored.concat(transpileModules)
+          ? config.watchOptions.ignored
+              .concat(transpileModules.map((i) => '**/node_modules/!(' + i + ')*/**'))
+              .filter((i) => i !== '**/node_modules/**')
           : config.watchOptions.ignored
               .filter((pattern) => !regexEqual(pattern, /[\\/]node_modules[\\/]/) && pattern !== '**/node_modules/**')
               .concat(excludes);
