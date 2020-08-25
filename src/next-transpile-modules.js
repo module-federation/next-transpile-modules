@@ -168,9 +168,15 @@ const withTmInitializer = (transpileModules = [], options = {}) => {
         }
 
         if (isWebpack5) {
-          const managed = transpileModules.map((mod) => {
-            return path.dirname(require.resolve(mod));
-          });
+          const managed = transpileModules.reduce((acc, mod) => {
+            try {
+              // tests dont have valid package.json field to resolve modules
+              acc.push(path.dirname(require.resolve(mod)));
+            } catch (e) {
+              console.warn('Unable to resolve module', mod);
+            }
+            return acc;
+          }, []);
 
           config.cache = {
             type: 'memory',
