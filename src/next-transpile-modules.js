@@ -199,6 +199,11 @@ const withTmInitializer = (modules = [], options = {}) => {
           config.cache = false;
         }
 
+          config.cache = {
+            type: 'memory',
+            managedPaths: managed
+          };
+        }
         // Overload the Webpack config if it was already overloaded
         if (typeof nextConfig.webpack === 'function') {
           return nextConfig.webpack(config, options);
