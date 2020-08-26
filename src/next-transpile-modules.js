@@ -188,9 +188,21 @@ const withTmInitializer = (modules = [], options = {}) => {
         ];
 
         if (isWebpack5) {
-          config.cache = false;
-        }
+          const managed = transpileModules.reduce((acc, mod) => {
+            try {
+              // tests dont have valid package.json field to resolve modules
+              acc.push(path.dirname(require.resolve(mod)));
+            } catch (e) {
+              console.warn('Unable to resolve module', mod);
+            }
+            return acc;
+          }, []);
 
+          config.cache = {
+            type: 'memory',
+            managedPaths: managed
+          };
+        }
         // Overload the Webpack config if it was already overloaded
         if (typeof nextConfig.webpack === 'function') {
           return nextConfig.webpack(config, options);
