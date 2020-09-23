@@ -183,7 +183,6 @@ const withTmInitializer = (transpileModules = [], options = {}) => {
             managedPaths: managed
           };
         }
-
         // Overload the Webpack config if it was already overloaded
         if (typeof nextConfig.webpack === 'function') {
           return nextConfig.webpack(config, options);

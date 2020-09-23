@@ -1,6 +1,6 @@
 {
-  "name": "next-transpile-modules",
-  "version": "4.1.0",
+  "name": "@module-federation/next-transpile-modules",
+  "version": "4.1.2",
   "main": "src/next-transpile-modules.js",
   "license": "MIT",
   "author": "Pierre de la Martinière <pierre.de.la.martiniere@gmail.com>",
