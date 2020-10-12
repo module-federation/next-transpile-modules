@@ -179,7 +179,7 @@ const withTmInitializer = (transpileModules = [], options = {}) => {
           }, []);
 
           config.cache = {
-            type: 'memory',
+            type: 'filesystem',
             managedPaths: managed
           };
         }
