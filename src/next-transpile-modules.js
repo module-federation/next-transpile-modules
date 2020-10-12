@@ -253,7 +253,7 @@ const withTmInitializer = (modules = [], options = {}) => {
           }, []);
 
           config.cache = {
-            type: 'memory',
+            type: 'filesystem',
             managedPaths: managed
           };
         }
