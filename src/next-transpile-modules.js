@@ -1,5 +1,5 @@
 const path = require('path');
-
+const fs = require('fs')
 const PATH_DELIMITER = '[\\\\/]'; // match 2 antislashes or one slash
 
 // Use me when needed
@@ -173,7 +173,14 @@ const withTmInitializer = (transpileModules = [], options = {}) => {
               // tests dont have valid package.json field to resolve modules
               acc.push(path.dirname(require.resolve(mod)));
             } catch (e) {
-              console.warn('Unable to resolve module', mod);
+              // acc.push(mod)
+              const foundPackage = require.main.paths.find((resoluionPath) => {
+                return fs.existsSync(path.join(resoluionPath, mod));
+              });
+              acc.push(path.join(foundPackage, mod));
+              if (!foundPackage) {
+                console.warn('Unable to resolve module', mod);
+              }
             }
             return acc;
           }, []);
