@@ -5,7 +5,6 @@ const enhancedResolve = require('enhanced-resolve');
 const escalade = require('escalade/sync');
 
 // Use me when needed
-// const util = require('util');
 // const inspect = (object) => {
 //   console.log(util.inspect(object, { showHidden: false, depth: null }));
 // };
@@ -23,11 +22,7 @@ const resolve = enhancedResolve.create.sync({
 });
 
 /**
- * Check if two regexes are equal
  * Stolen from https://stackoverflow.com/questions/10776600/testing-for-equality-of-regular-expressions
- *
- * @param {RegExp} x
- * @param {RegExp} y
  */
 const regexEqual = (x, y) => {
   return (
@@ -102,9 +97,9 @@ const createLogger = (enable) => {
  * @param {string[]} modules
  * @param {{resolveSymlinks?: boolean; debug?: boolean, unstable_webpack5?: boolean}} options
  */
-const withTmInitializer = (modules = [], options = {}) => {
+const withTmInitializer = (transpileModules = [], options = {}) => {
   const withTM = (nextConfig = {}) => {
-    if (modules.length === 0) return nextConfig;
+    if (transpileModules.length === 0) return nextConfig;
 
     const resolveSymlinks = options.resolveSymlinks || false;
     const isWebpack5 = options.unstable_webpack5 || false;
@@ -186,7 +181,7 @@ const withTmInitializer = (modules = [], options = {}) => {
           config.module.rules.push({
             test: /\.+(js|jsx|mjs|ts|tsx)$/,
             use: options.defaultLoaders.babel,
-            include: match,
+            include: includes
           });
 
           // IMPROVE ME: we are losing all the cache on node_modules, which is terrible
@@ -198,7 +193,7 @@ const withTmInitializer = (modules = [], options = {}) => {
           config.module.rules.push({
             test: /\.+(js|jsx|mjs|ts|tsx)$/,
             loader: options.defaultLoaders.babel,
-            include: match,
+            include: includes
           });
         }
 
@@ -231,7 +226,23 @@ const withTmInitializer = (modules = [], options = {}) => {
           } else {
             console.warn('next-transpile-modules - could not find default SASS rule, SASS imports may not work');
           }
-        }
+
+          // Hack our way to disable errors on node_modules CSS modules
+          const nextErrorCssModuleLoader = nextCssLoaders.oneOf.find(
+            (rule) =>
+              rule.use &&
+              rule.use.loader === 'error-loader' &&
+              rule.use.options &&
+              (rule.use.options.reason ===
+                'CSS Modules \u001b[1mcannot\u001b[22m be imported from within \u001b[1mnode_modules\u001b[22m.\n' +
+                  'Read more: https://err.sh/next.js/css-modules-npm' ||
+                rule.use.options.reason ===
+                  'CSS Modules cannot be imported from within node_modules.\nRead more: https://err.sh/next.js/css-modules-npm')
+          );
+
+          if (nextErrorCssModuleLoader) {
+            nextErrorCssModuleLoader.exclude = includes;
+          }
 
         // Make hot reloading work!
         // FIXME: not working on Wepback 5
@@ -247,7 +258,14 @@ const withTmInitializer = (modules = [], options = {}) => {
               // tests dont have valid package.json field to resolve modules
               acc.push(path.dirname(require.resolve(mod)));
             } catch (e) {
-              console.warn('Unable to resolve module', mod);
+              // acc.push(mod)
+              const foundPackage = require.main.paths.find((resoluionPath) => {
+                return fs.existsSync(path.join(resoluionPath, mod));
+              });
+              acc.push(path.join(foundPackage, mod));
+              if (!foundPackage) {
+                console.warn('Unable to resolve module', mod);
+              }
             }
             return acc;
           }, []);
@@ -264,6 +282,30 @@ const withTmInitializer = (modules = [], options = {}) => {
 
         return config;
       },
+
+      // webpackDevMiddleware needs to be told to watch the changes in the
+      // transpiled modules directories
+      webpackDevMiddleware(config) {
+        // Replace /node_modules/ by the new exclude RegExp (including the modules
+        // that are going to be transpiled)
+        // https://github.com/zeit/next.js/blob/815f2e91386a0cd046c63cbec06e4666cff85971/packages/next/server/hot-reloader.js#L335
+
+        const ignored = isWebpack5
+          ? config.watchOptions.ignored
+              .concat(transpileModules.map((i) => '**/node_modules/!(' + i + ')*/**'))
+              .filter((i) => i !== '**/node_modules/**')
+          : config.watchOptions.ignored
+              .filter((pattern) => !regexEqual(pattern, /[\\/]node_modules[\\/]/) && pattern !== '**/node_modules/**')
+              .concat(excludes);
+
+        config.watchOptions.ignored = ignored;
+
+        if (typeof nextConfig.webpackDevMiddleware === 'function') {
+          return nextConfig.webpackDevMiddleware(config);
+        }
+
+        return config;
+      }
     });
   };
 
