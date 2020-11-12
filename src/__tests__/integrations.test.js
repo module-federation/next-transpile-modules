@@ -1,7 +1,8 @@
 describe.each([
   ['npm', 3500], // name of the test, port
-  ['yarn-worspaces', 3501],
-  ['webpack-5', 3502]
+  ['yarn-workspaces', 3501],
+  ['webpack-5', 3502],
+  ['pnpm', 3503],
 ])('%s integration', (name, port) => {
   const BASE_URL = `http://localhost:${port}`;
 

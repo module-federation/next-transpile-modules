@@ -12,16 +12,16 @@
   "license": "MIT",
   "dependencies": {
     "lodash-es": "^4.17.15",
-    "next": "9.5.4",
-    "react": "^16.13.1",
-    "react-dom": "^16.13.1",
-    "sass": "^1.26.10",
+    "next": "10.0.0",
+    "react": "^17.0.1",
+    "react-dom": "^17.0.1",
+    "sass": "^1.27.0",
     "shared": "file:../_shared",
     "shared-ts": "file:../_shared-ts",
     "shared-ui": "file:../_shared-ui"
   },
   "devDependencies": {
-    "@types/react": "^16.9.44",
+    "@types/react": "^16.9.53",
     "@types/react-dom": "^16.9.8",
     "cross-env": "^7.0.2"
   },

@@ -1,23 +1,27 @@
 {
   "name": "@module-federation/next-transpile-modules",
   "version": "4.2.0",
-  "main": "src/next-transpile-modules.js",
   "license": "MIT",
   "author": "Pierre de la Martinière <pierre.de.la.martiniere@gmail.com>",
   "description": "Next.js plugin to transpile code from node_modules (supports TypeScript)",
+  "main": "src/next-transpile-modules.js",
+  "files": [
+    "src/next-transpile-modules.js"
+  ],
   "scripts": {
-    "test": "jest",
+    "pretest": "node --trace-uncaught src/__tests__/setup.js",
+    "quickie": "node --trace-uncaught src/__tests__/setup.js && npm run dev --prefix src/__tests__/__apps__/npm-basic",
+    "test": "jest --forceExit",
+    "test:debug": "jest --detectOpenHandles --forceExit",
     "test:lint": "eslint .",
     "test:formatting": "prettier --check \"**/*.js\"",
     "test:formatting:fix": "prettier --check \"**/*.js\" --write",
     "test:prepare:npm-basic": "npm run build --prefix=src/__tests__/__apps__/npm-basic",
     "test:prepare:yarn-worskpaces": "yarn --cwd src/__tests__/__apps__/yarn-workspaces/app run build",
     "test:prepare:webpack-5": "yarn --cwd src/__tests__/__apps__/webpack-5 run build",
-    "test:prepare": "npm run test:prepare:npm-basic && npm run test:prepare:yarn-worskpaces && npm run test:prepare:webpack-5"
+    "test:prepare:pnpm": "npm run build --prefix=src/__tests__/__apps__/pnpm",
+    "test:prepare": "npm run test:prepare:npm-basic && npm run test:prepare:yarn-worskpaces && npm run test:prepare:webpack-5 && npm run test:prepare:pnpm"
   },
-  "files": [
-    "index.js"
-  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/martpie/next-transpile-modules.git"
@@ -36,27 +40,28 @@
     "webpack"
   ],
   "dependencies": {
-    "micromatch": "^4.0.2",
-    "slash": "^3.0.0"
+    "resolve": "^1.19.0"
   },
   "devDependencies": {
-    "@types/jest-environment-puppeteer": "4.3.2",
-    "anymatch": "2.0.0",
-    "eslint": "6.8.0",
-    "eslint-config-prettier": "6.11.0",
-    "eslint-config-semistandard": "15.0.1",
-    "eslint-plugin-import": "2.22.0",
-    "eslint-plugin-jest": "23.20.0",
-    "eslint-plugin-node": "11.1.0",
-    "eslint-plugin-promise": "4.2.1",
-    "eslint-plugin-standard": "4.0.1",
-    "jest": "25.1.0",
-    "jest-environment-puppeteer": "4.4.0",
+    "@types/jest-environment-puppeteer": "4.4.0",
+    "anymatch": "^2.0.0",
+    "eslint": "^7.12.1",
+    "eslint-config-prettier": "^6.15.0",
+    "eslint-config-semistandard": "^15.0.1",
+    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-jest": "^24.1.0",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^4.2.1",
+    "eslint-plugin-standard": "^4.0.2",
+    "fs-extra": "^9.0.1",
+    "jest": "^26.6.3",
+    "jest-environment-node": "^26.6.2",
+    "jest-environment-puppeteer": "^4.4.0",
     "jest-puppeteer": "^4.4.0",
-    "prettier": "1.19.1",
-    "prettier-eslint": "9.0.1",
-    "puppeteer": "5.2.1",
-    "rewire": "4.0.1",
+    "prettier": "^2.1.2",
+    "prettier-eslint": "^11.0.0",
+    "puppeteer": "^5.4.1",
+    "rewire": "^4.0.1",
     "webpack": "^4.44.0"
   }
 }
