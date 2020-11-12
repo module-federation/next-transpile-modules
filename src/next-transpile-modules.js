@@ -1,5 +1,5 @@
 const path = require('path');
-
+const fs = require('fs')
 const PATH_DELIMITER = '[\\\\/]'; // match 2 antislashes or one slash
 
 // Use me when needed
