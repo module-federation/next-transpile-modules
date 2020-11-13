@@ -1,5 +1,5 @@
 {
-  "name": "@module-federation/next-transpile-modules",
+  "name": "next-transpile-modules",
   "version": "5.0.0-beta.5",
   "license": "MIT",
   "author": "Pierre de la Martinière <pierre.de.la.martiniere@gmail.com>",
