@@ -272,6 +272,20 @@ const withTmInitializer = (modules = [], options = {}) => {
           };
         }
 
+        //dunno what to do about above
+        if (isWebpack5) {
+          config.watchOptions.ignored = generateExcludes(modules);
+
+          config.cache = {
+            type: 'filesystem',
+            // paths dont seem to work
+            // might need better resolution to the paths. dirname can trim off "thepackage" from @company/thepackage
+            managedPaths: resolvedModules,
+          };
+          // slow, real slow, but works
+          config.cache = false;
+        }
+
         // Overload the Webpack config if it was already overloaded
         if (typeof nextConfig.webpack === "function") {
           return nextConfig.webpack(config, options);
