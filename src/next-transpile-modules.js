@@ -193,11 +193,8 @@ const withTmInitializer = (modules = [], options = {}) => {
         // Make hot reloading work!
         // FIXME: not working on Wepback 5
         // https://github.com/vercel/next.js/issues/13039
-        config.watchOptions.ignored = [
-          ...resolvedModules.map(mod => `!${mod}/**`),
-          // this line below causes the problem as it ignores all node modules
-          ...config.watchOptions.ignored, // remove it and webpack responds to hot changes
-        ];
+        var globToRegExp = require('glob-to-regexp');
+        config.watchOptions.ignored = /node_modules/
 
 
         if (isWebpack5) {
