@@ -3,6 +3,7 @@ const fs = require("fs");
 const resolve = require("resolve");
 
 // Use me when needed
+// const util = require('util');
 // const inspect = (object) => {
 //   console.log(util.inspect(object, { showHidden: false, depth: null }));
 // };
@@ -23,6 +24,23 @@ const regexEqual = (x, y) => {
     x.ignoreCase === y.ignoreCase &&
     x.multiline === y.multiline
   );
+};
+
+const PATH_DELIMITER = '[\\\\/]'; // match 2 antislashes or one slash
+
+const safePath = (module) => module.split(/[\\\/]/g).join(PATH_DELIMITER);
+
+const generateExcludes = (modules) => {
+  return new RegExp(
+    `node_modules${PATH_DELIMITER}(?!(${modules.map(safePath).join('|')})(${PATH_DELIMITER}|$)(?!.*node_modules))`
+  );
+};
+
+const generateIncludes = (modules) => {
+  return [
+    new RegExp(`(${modules.map(safePath).join('|')})$`),
+    new RegExp(`(${modules.map(safePath).join('|')})${PATH_DELIMITER}(?!.*node_modules)`),
+  ];
 };
 
 /**
@@ -68,17 +86,15 @@ const withTmInitializer = (modules = [], options = {}) => {
 
     // Generate Webpack condition for the passed modules
     // https://webpack.js.org/configuration/module/#ruleinclude
-    const match = path =>
-      resolvedModules.some(modulePath => path.includes(modulePath));
-    const unmatch = path =>
-      resolvedModules.every(modulePath => !path.includes(modulePath));
+    const match = (path) => resolvedModules.some((modulePath) => path.includes(modulePath));
+    const unmatch = (path) => resolvedModules.every((modulePath) => !path.includes(modulePath));
 
     return Object.assign({}, nextConfig, {
       webpack(config, options) {
         // Safecheck for Next < 5.0
         if (!options.defaultLoaders) {
           throw new Error(
-            "This plugin is not compatible with Next.js versions below 5.0.0 https://err.sh/next-plugins/upgrade"
+            'This plugin is not compatible with Next.js versions below 5.0.0 https://err.sh/next-plugins/upgrade'
           );
         }
 
@@ -89,9 +105,9 @@ const withTmInitializer = (modules = [], options = {}) => {
         config.resolve.symlinks = resolveSymlinks;
 
         const hasInclude = (ctx, req) => {
-          const test = resolvedModules.some(mod => {
+          const test = resolvedModules.some((mod) => {
             // If we the code requires/import an absolute path
-            if (!req.startsWith(".")) {
+            if (!req.startsWith('.')) {
               try {
                 const re = resolve.sync(req);
 
@@ -112,14 +128,12 @@ const withTmInitializer = (modules = [], options = {}) => {
 
         // Since Next.js 8.1.0, config.externals is undefined
         if (config.externals) {
-          config.externals = config.externals.map(external => {
-            if (typeof external !== "function") return external;
+          config.externals = config.externals.map((external) => {
+            if (typeof external !== 'function') return external;
 
             if (isWebpack5) {
               return ({ context, request }, cb) => {
-                return hasInclude(context, request)
-                  ? cb()
-                  : external({ context, request }, cb);
+                return hasInclude(context, request) ? cb() : external({ context, request }, cb);
               };
             }
 
@@ -134,84 +148,73 @@ const withTmInitializer = (modules = [], options = {}) => {
           config.module.rules.push({
             test: /\.+(js|jsx|mjs|ts|tsx)$/,
             use: options.defaultLoaders.babel,
-            include: match
+            include: match,
           });
         } else {
           config.module.rules.push({
             test: /\.+(js|jsx|mjs|ts|tsx)$/,
             loader: options.defaultLoaders.babel,
-            include: match
+            include: match,
           });
         }
 
         // Support CSS modules + global in node_modules
         // TODO ask Next.js maintainer to expose the css-loader via defaultLoaders
-        const nextCssLoaders = config.module.rules.find(
-          rule => typeof rule.oneOf === "object"
-        );
+        const nextCssLoaders = config.module.rules.find((rule) => typeof rule.oneOf === 'object');
 
         // .module.css
         if (nextCssLoaders) {
           const nextCssLoader = nextCssLoaders.oneOf.find(
-            rule =>
-              rule.sideEffects === false &&
-              regexEqual(rule.test, /\.module\.css$/)
+            (rule) => rule.sideEffects === false && regexEqual(rule.test, /\.module\.css$/)
           );
 
           const nextSassLoader = nextCssLoaders.oneOf.find(
-            rule =>
-              rule.sideEffects === false &&
-              regexEqual(rule.test, /\.module\.(scss|sass)$/)
+            (rule) => rule.sideEffects === false && regexEqual(rule.test, /\.module\.(scss|sass)$/)
           );
 
           if (nextCssLoader) {
-            nextCssLoader.issuer.or = nextCssLoader.issuer.and
-              ? nextCssLoader.issuer.and.concat(match)
-              : match;
+            nextCssLoader.issuer.or = nextCssLoader.issuer.and ? nextCssLoader.issuer.and.concat(match) : match;
             nextCssLoader.issuer.not = [unmatch];
             delete nextCssLoader.issuer.and;
           } else {
-            console.warn(
-              "next-transpile-modules: could not find default CSS rule, CSS imports may not work"
-            );
+            console.warn('next-transpile-modules: could not find default CSS rule, CSS imports may not work');
           }
 
           if (nextSassLoader) {
-            nextSassLoader.issuer.or = nextSassLoader.issuer.and
-              ? nextSassLoader.issuer.and.concat(match)
-              : match;
+            nextSassLoader.issuer.or = nextSassLoader.issuer.and ? nextSassLoader.issuer.and.concat(match) : match;
             nextSassLoader.issuer.not = [unmatch];
             delete nextSassLoader.issuer.and;
           } else {
-            console.warn(
-              "next-transpile-modules: could not find default SASS rule, SASS imports may not work"
-            );
+            console.warn('next-transpile-modules: could not find default SASS rule, SASS imports may not work');
           }
         }
-        config.watchOptions.ignored.push = console.log
 
         // Make hot reloading work!
         // FIXME: not working on Wepback 5
         // https://github.com/vercel/next.js/issues/13039
-        var globToRegExp = require('glob-to-regexp');
-        config.watchOptions.ignored = /node_modules/
+        config.watchOptions.ignored = [...resolvedModules.map((mod) => `!${mod}/**`), ...config.watchOptions.ignored];
 
-
+        //dunno what to do about above
         if (isWebpack5) {
+          config.watchOptions.ignored = generateExcludes(modules);
 
           config.cache = {
-            type: "filesystem",
-            managedPaths: Array.from(new Set(resolvedModules))
+            type: 'filesystem',
+            // paths dont seem to work
+            // might need better resolution to the paths. dirname can trim off "thepackage" from @company/thepackage
+            managedPaths: resolvedModules,
           };
+          // slow, real slow, but works
+          config.cache = false;
         }
 
         // Overload the Webpack config if it was already overloaded
-        if (typeof nextConfig.webpack === "function") {
+        if (typeof nextConfig.webpack === 'function') {
           return nextConfig.webpack(config, options);
         }
 
         return config;
-      }
+      },
     });
   };
 
