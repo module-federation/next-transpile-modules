@@ -1,6 +1,6 @@
 {
   "name": "@module-federation/next-transpile-modules",
-  "version": "4.5.0-beta.0",
+  "version": "5.0.0-beta.5",
   "license": "MIT",
   "author": "Pierre de la Martinière <pierre.de.la.martiniere@gmail.com>",
   "description": "Next.js plugin to transpile code from node_modules (supports TypeScript)",
@@ -40,8 +40,7 @@
     "webpack"
   ],
   "dependencies": {
-    "glob-to-regexp": "^0.4.1",
-    "resolve": "^1.19.0"
+    "enhanced-resolve": "^5.3.1"
   },
   "devDependencies": {
     "@types/jest-environment-puppeteer": "4.4.0",

@@ -1,12 +1,19 @@
-const path = require("path");
-const fs = require("fs");
-const resolve = require("resolve");
+const path = require('path');
+const enhancedResolve = require('enhanced-resolve');
 
 // Use me when needed
 // const util = require('util');
 // const inspect = (object) => {
 //   console.log(util.inspect(object, { showHidden: false, depth: null }));
 // };
+
+/**
+ * We create our own Node.js resolver that can ignore symlinks resolution and
+ * can support PnP
+ */
+const resolve = enhancedResolve.create.sync({
+  symlinks: false,
+});
 
 /**
  * Check if two regexes are equal
@@ -26,40 +33,21 @@ const regexEqual = (x, y) => {
   );
 };
 
-const PATH_DELIMITER = '[\\\\/]'; // match 2 antislashes or one slash
-
-const safePath = (module) => module.split(/[\\\/]/g).join(PATH_DELIMITER);
-
-const generateExcludes = (modules) => {
-  return new RegExp(
-    `node_modules${PATH_DELIMITER}(?!(${modules.map(safePath).join('|')})(${PATH_DELIMITER}|$)(?!.*node_modules))`
-  );
-};
-
-const generateIncludes = (modules) => {
-  return [
-    new RegExp(`(${modules.map(safePath).join('|')})$`),
-    new RegExp(`(${modules.map(safePath).join('|')})${PATH_DELIMITER}(?!.*node_modules)`),
-  ];
-};
-
 /**
  * Resolve modules to their real paths
  * @param {string[]} modules
  */
-const generateResolvedModules = modules => {
+const generateResolvedModules = (modules) => {
   const resolvedModules = modules
-    .map(module => {
+    .map((module) => {
       let resolved;
+
       try {
-        resolved = resolve.sync(module);
+        resolved = resolve(__dirname, module);
       } catch (e) {
-        require.main.paths.find(resolutionPath => {
-          if (fs.existsSync(path.join(resolutionPath, module))) {
-            resolved = path.join(resolutionPath, module);
-          }
-        });
+        console.error(e);
       }
+
       if (!resolved)
         throw new Error(
           `next-transpile-modules: could not resolve module "${module}". Are you sure the name of the module you are trying to transpile is correct?`
@@ -109,11 +97,11 @@ const withTmInitializer = (modules = [], options = {}) => {
             // If we the code requires/import an absolute path
             if (!req.startsWith('.')) {
               try {
-                const re = resolve.sync(req);
+                const resolved = resolve(__dirname, req);
 
-                if (!re) return false;
+                if (!resolved) return false;
 
-                return re.includes(mod);
+                return resolved.includes(mod);
               } catch (err) {
                 return false;
               }
