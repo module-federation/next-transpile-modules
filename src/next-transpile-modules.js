@@ -1,5 +1,6 @@
 const path = require('path');
 const enhancedResolve = require('enhanced-resolve');
+const pkgUp = require('pkg-up');
 
 // Use me when needed
 // const util = require('util');
@@ -188,19 +189,68 @@ const withTmInitializer = (modules = [], options = {}) => {
         ];
 
         if (isWebpack5) {
-          const managed = transpileModules.reduce((acc, mod) => {
-            try {
-              // tests dont have valid package.json field to resolve modules
-              acc.push(path.dirname(require.resolve(mod)));
-            } catch (e) {
-              console.warn('Unable to resolve module', mod);
+          const managed = generateResolvedModules(modules);
+
+          const checkForTranspiledModules = (currentPath) =>
+            modules.find((mod) => {
+              return currentPath.includes(path.dirname(mod)) || currentPath.includes(mod);
+            });
+          const { readdirSync, existsSync } = require('fs');
+
+          const getDirectories = (source) =>
+            readdirSync(source, { withFileTypes: true })
+              .filter((dirent) => dirent.isDirectory())
+              .map((dirent) => {
+                return dirent.name;
+              });
+
+          const pathsToManage = require.main.paths.reduce((acc, resolutionPath) => {
+            if (!existsSync(resolutionPath)) {
+              return acc;
             }
+            const subDirectories = getDirectories(resolutionPath);
+
+            subDirectories.forEach((directory) => {
+              if (directory.startsWith('.')) return;
+              const joinedPath = path.join(resolutionPath, directory);
+              if (directory.startsWith('@')) {
+                getDirectories(joinedPath).forEach((dir) => {
+                  if (!checkForTranspiledModules(joinedPath)) {
+                    try {
+                      acc.push(path.dirname(pkgUp.sync({ cwd: resolve(__dirname, dir) })));
+                    } catch (e) {
+                      acc.push(path.dirname(pkgUp.sync({ cwd: path.join(joinedPath, dir) })));
+                    }
+                  }
+                });
+                return acc;
+              }
+
+              if (!checkForTranspiledModules(joinedPath)) {
+                try {
+                  acc.push(path.dirname(pkgUp.sync({ cwd: resolve(__dirname, directory) })));
+                } catch (e) {
+                  acc.push(path.dirname(pkgUp.sync({ cwd: joinedPath })));
+                }
+              }
+            });
+
             return acc;
           }, []);
+          const snapshot = Object.assign({}, config.snapshot);
+
+          const simpleResolve = Object.keys(require(pkgUp.sync()).dependencies).map(key=>{
+            return pkgUp.sync({cwd:resolve(__dirname,key)})
+          }).filter((i)=>{
+            return !checkForTranspiledModules(i)
+          })
+
+          config.snapshot = Object.assign(snapshot, {
+            managedPaths: simpleResolve,
+          });
 
           config.cache = {
             type: 'filesystem',
-            managedPaths: managed
           };
         }
         // Overload the Webpack config if it was already overloaded
