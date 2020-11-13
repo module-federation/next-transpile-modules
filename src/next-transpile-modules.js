@@ -189,61 +189,20 @@ const withTmInitializer = (modules = [], options = {}) => {
         ];
 
         if (isWebpack5) {
-          const managed = generateResolvedModules(modules);
-
           const checkForTranspiledModules = (currentPath) =>
             modules.find((mod) => {
               return currentPath.includes(path.dirname(mod)) || currentPath.includes(mod);
             });
-          const { readdirSync, existsSync } = require('fs');
 
-          const getDirectories = (source) =>
-            readdirSync(source, { withFileTypes: true })
-              .filter((dirent) => dirent.isDirectory())
-              .map((dirent) => {
-                return dirent.name;
-              });
-
-          const pathsToManage = require.main.paths.reduce((acc, resolutionPath) => {
-            if (!existsSync(resolutionPath)) {
-              return acc;
-            }
-            const subDirectories = getDirectories(resolutionPath);
-
-            subDirectories.forEach((directory) => {
-              if (directory.startsWith('.')) return;
-              const joinedPath = path.join(resolutionPath, directory);
-              if (directory.startsWith('@')) {
-                getDirectories(joinedPath).forEach((dir) => {
-                  if (!checkForTranspiledModules(joinedPath)) {
-                    try {
-                      acc.push(path.dirname(pkgUp.sync({ cwd: resolve(__dirname, dir) })));
-                    } catch (e) {
-                      acc.push(path.dirname(pkgUp.sync({ cwd: path.join(joinedPath, dir) })));
-                    }
-                  }
-                });
-                return acc;
-              }
-
-              if (!checkForTranspiledModules(joinedPath)) {
-                try {
-                  acc.push(path.dirname(pkgUp.sync({ cwd: resolve(__dirname, directory) })));
-                } catch (e) {
-                  acc.push(path.dirname(pkgUp.sync({ cwd: joinedPath })));
-                }
-              }
-            });
-
-            return acc;
-          }, []);
           const snapshot = Object.assign({}, config.snapshot);
-
-          const simpleResolve = Object.keys(require(pkgUp.sync()).dependencies).map(key=>{
-            return pkgUp.sync({cwd:resolve(__dirname,key)})
-          }).filter((i)=>{
-            return !checkForTranspiledModules(i)
-          })
+          const mainPkg = require(pkgUp.sync());
+          const simpleResolve = Object.keys({ ...mainPkg.dependencies, ...mainPkg.resolutions })
+            .map((key) => {
+              return pkgUp.sync({ cwd: resolve(__dirname, key) });
+            })
+            .filter((i) => {
+              return !checkForTranspiledModules(i);
+            });
 
           config.snapshot = Object.assign(snapshot, {
             managedPaths: simpleResolve,

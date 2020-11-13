@@ -4,9 +4,12 @@
 ![Dependencies](https://img.shields.io/david/martpie/next-transpile-modules)
 
 Transpile untranspiled modules from `node_modules` using the Next.js Babel configuration.
+
 Makes it easy to have local libraries and keep a slick, manageable dev experience.
 
-Supports all extensions supported by Next.js: `.js`, `.jsx`, `.ts`, `.tsx`, `.mjs`, `.css`, `.scss` and `.sass`.
+- Supports transpilation of all extensions supported by Next.js: `.js`, `.jsx`, `.ts`, `.tsx`, `.mjs`, `.css`, `.scss` and `.sass`
+- Enable hot-reloading on local packages
+- Most setups should work out of the box (npm, yarn, pnpm, ...)
 
 ## What problems does it solve?
 
@@ -21,14 +24,14 @@ What this plugin **does not aim** to solve:
 
 ## Compatibility table
 
-| Next.js version | Plugin version |
-| --------------- | -------------- |
-| Next.js 9.5+    | 4.x            |
-| Next.js 9.2     | 3.x            |
-| Next.js 8 / 9   | 2.x            |
-| Next.js 6 / 7   | 1.x            |
+| Next.js version   | Plugin version |
+| ----------------- | -------------- |
+| Next.js 9.5+ / 10 | 4.x            |
+| Next.js 9.2       | 3.x            |
+| Next.js 8 / 9     | 2.x            |
+| Next.js 6 / 7     | 1.x            |
 
-Latest version tested: **9.5.4**.
+Latest version tested: **10.0.0**.
 
 ## Installation
 
@@ -235,11 +238,11 @@ module.exports = withTM({
       ...config.resolve.alias,
       // Will make webpack look for these modules in parent directories
       '@your-project/shared': require.resolve('@your-project/shared'),
-      '@your-project/styleguide': require.resolve('@your-project/styleguide')
+      '@your-project/styleguide': require.resolve('@your-project/styleguide'),
       // ...
     };
     return config;
-  }
+  },
 });
 ```
 
