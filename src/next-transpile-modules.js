@@ -22,7 +22,11 @@ const resolve = enhancedResolve.create.sync({
 });
 
 /**
+ * Check if two regexes are equal
  * Stolen from https://stackoverflow.com/questions/10776600/testing-for-equality-of-regular-expressions
+ *
+ * @param {RegExp} x
+ * @param {RegExp} y
  */
 const regexEqual = (x, y) => {
   return (
@@ -97,9 +101,9 @@ const createLogger = (enable) => {
  * @param {string[]} modules
  * @param {{resolveSymlinks?: boolean; debug?: boolean, unstable_webpack5?: boolean}} options
  */
-const withTmInitializer = (transpileModules = [], options = {}) => {
+const withTmInitializer = (modules = [], options = {}) => {
   const withTM = (nextConfig = {}) => {
-    if (transpileModules.length === 0) return nextConfig;
+    if (modules.length === 0) return nextConfig;
 
     const resolveSymlinks = options.resolveSymlinks || false;
     const isWebpack5 = options.unstable_webpack5 || false;
@@ -127,7 +131,7 @@ const withTmInitializer = (transpileModules = [], options = {}) => {
         // Safecheck for Next < 5.0
         if (!options.defaultLoaders) {
           throw new Error(
-            'This plugin is not compatible with Next.js versions below 5.0.0 https://err.sh/next-plugins/upgrade'
+            "This plugin is not compatible with Next.js versions below 5.0.0 https://err.sh/next-plugins/upgrade"
           );
         }
 
@@ -161,8 +165,8 @@ const withTmInitializer = (transpileModules = [], options = {}) => {
 
         // Since Next.js 8.1.0, config.externals is undefined
         if (config.externals) {
-          config.externals = config.externals.map((external) => {
-            if (typeof external !== 'function') return external;
+          config.externals = config.externals.map(external => {
+            if (typeof external !== "function") return external;
 
             if (isWebpack5) {
               return ({ context, request }, cb) => {
@@ -181,7 +185,7 @@ const withTmInitializer = (transpileModules = [], options = {}) => {
           config.module.rules.push({
             test: /\.+(js|jsx|mjs|ts|tsx)$/,
             use: options.defaultLoaders.babel,
-            include: includes
+            include: match
           });
 
           // IMPROVE ME: we are losing all the cache on node_modules, which is terrible
@@ -193,22 +197,28 @@ const withTmInitializer = (transpileModules = [], options = {}) => {
           config.module.rules.push({
             test: /\.+(js|jsx|mjs|ts|tsx)$/,
             loader: options.defaultLoaders.babel,
-            include: includes
+            include: match
           });
         }
 
         // Support CSS modules + global in node_modules
         // TODO ask Next.js maintainer to expose the css-loader via defaultLoaders
-        const nextCssLoaders = config.module.rules.find((rule) => typeof rule.oneOf === 'object');
+        const nextCssLoaders = config.module.rules.find(
+          rule => typeof rule.oneOf === "object"
+        );
 
         // .module.css
         if (nextCssLoaders) {
           const nextCssLoader = nextCssLoaders.oneOf.find(
-            (rule) => rule.sideEffects === false && regexEqual(rule.test, /\.module\.css$/)
+            rule =>
+              rule.sideEffects === false &&
+              regexEqual(rule.test, /\.module\.css$/)
           );
 
           const nextSassLoader = nextCssLoaders.oneOf.find(
-            (rule) => rule.sideEffects === false && regexEqual(rule.test, /\.module\.(scss|sass)$/)
+            rule =>
+              rule.sideEffects === false &&
+              regexEqual(rule.test, /\.module\.(scss|sass)$/)
           );
 
           if (nextCssLoader) {
@@ -243,6 +253,8 @@ const withTmInitializer = (transpileModules = [], options = {}) => {
           if (nextErrorCssModuleLoader) {
             nextErrorCssModuleLoader.exclude = includes;
           }
+        }
+        config.watchOptions.ignored.push = console.log
 
         // Make hot reloading work!
         // FIXME: not working on Wepback 5
@@ -253,55 +265,16 @@ const withTmInitializer = (transpileModules = [], options = {}) => {
         ];
 
         if (isWebpack5) {
-          const managed = transpileModules.reduce((acc, mod) => {
-            try {
-              // tests dont have valid package.json field to resolve modules
-              acc.push(path.dirname(require.resolve(mod)));
-            } catch (e) {
-              // acc.push(mod)
-              const foundPackage = require.main.paths.find((resoluionPath) => {
-                return fs.existsSync(path.join(resoluionPath, mod));
-              });
-              acc.push(path.join(foundPackage, mod));
-              if (!foundPackage) {
-                console.warn('Unable to resolve module', mod);
-              }
-            }
-            return acc;
-          }, []);
 
           config.cache = {
-            type: 'filesystem',
-            managedPaths: managed
+            type: "filesystem",
+            managedPaths: Array.from(new Set(resolvedModules))
           };
         }
+
         // Overload the Webpack config if it was already overloaded
-        if (typeof nextConfig.webpack === 'function') {
+        if (typeof nextConfig.webpack === "function") {
           return nextConfig.webpack(config, options);
-        }
-
-        return config;
-      },
-
-      // webpackDevMiddleware needs to be told to watch the changes in the
-      // transpiled modules directories
-      webpackDevMiddleware(config) {
-        // Replace /node_modules/ by the new exclude RegExp (including the modules
-        // that are going to be transpiled)
-        // https://github.com/zeit/next.js/blob/815f2e91386a0cd046c63cbec06e4666cff85971/packages/next/server/hot-reloader.js#L335
-
-        const ignored = isWebpack5
-          ? config.watchOptions.ignored
-              .concat(transpileModules.map((i) => '**/node_modules/!(' + i + ')*/**'))
-              .filter((i) => i !== '**/node_modules/**')
-          : config.watchOptions.ignored
-              .filter((pattern) => !regexEqual(pattern, /[\\/]node_modules[\\/]/) && pattern !== '**/node_modules/**')
-              .concat(excludes);
-
-        config.watchOptions.ignored = ignored;
-
-        if (typeof nextConfig.webpackDevMiddleware === 'function') {
-          return nextConfig.webpackDevMiddleware(config);
         }
 
         return config;
