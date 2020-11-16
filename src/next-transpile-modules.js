@@ -34,11 +34,28 @@ const regexEqual = (x, y) => {
   );
 };
 
+const PATH_DELIMITER = '[\\\\/]'; // match 2 antislashes or one slash
+
+const safePath = (module) => module.split(/[\\\/]/g).join(PATH_DELIMITER);
+
+const generateExcludes = (modules) => {
+  return new RegExp(
+    `node_modules${PATH_DELIMITER}(?!(${modules.map(safePath).join('|')})(${PATH_DELIMITER}|$)(?!.*node_modules))`
+  );
+};
+
+const generateIncludes = (modules) => {
+  return [
+    new RegExp(`(${modules.map(safePath).join('|')})$`),
+    new RegExp(`(${modules.map(safePath).join('|')})${PATH_DELIMITER}(?!.*node_modules)`),
+  ];
+};
+
 /**
  * Resolve modules to their real paths
  * @param {string[]} modules
  */
-const generateResolvedModules = (modules) => {
+const generateResolvedModules = modules => {
   const resolvedModules = modules
     .map((module) => {
       let resolved;
@@ -53,11 +70,9 @@ const generateResolvedModules = (modules) => {
         throw new Error(
           `next-transpile-modules: could not resolve module "${module}". Are you sure the name of the module you are trying to transpile is correct?`
         );
-
       return resolved;
     })
     .map(path.dirname);
-
   return resolvedModules;
 };
 
