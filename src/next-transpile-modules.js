@@ -1,12 +1,20 @@
-const path = require("path");
-const fs = require("fs");
-const resolve = require("resolve");
+const path = require('path');
+const enhancedResolve = require('enhanced-resolve');
+const pkgUp = require('pkg-up');
 
 // Use me when needed
 // const util = require('util');
 // const inspect = (object) => {
 //   console.log(util.inspect(object, { showHidden: false, depth: null }));
 // };
+
+/**
+ * We create our own Node.js resolver that can ignore symlinks resolution and
+ * can support PnP
+ */
+const resolve = enhancedResolve.create.sync({
+  symlinks: false,
+});
 
 /**
  * Check if two regexes are equal
@@ -49,17 +57,15 @@ const generateIncludes = (modules) => {
  */
 const generateResolvedModules = modules => {
   const resolvedModules = modules
-    .map(module => {
+    .map((module) => {
       let resolved;
+
       try {
-        resolved = resolve.sync(module);
+        resolved = resolve(__dirname, module);
       } catch (e) {
-        require.main.paths.find(resolutionPath => {
-          if (fs.existsSync(path.join(resolutionPath, module))) {
-            resolved = path.join(resolutionPath, module);
-          }
-        });
+        console.error(e);
       }
+
       if (!resolved)
         throw new Error(
           `next-transpile-modules: could not resolve module "${module}". Are you sure the name of the module you are trying to transpile is correct?`
@@ -109,11 +115,11 @@ const withTmInitializer = (modules = [], options = {}) => {
             // If we the code requires/import an absolute path
             if (!req.startsWith('.')) {
               try {
-                const re = resolve.sync(req);
+                const resolved = resolve(__dirname, req);
 
-                if (!re) return false;
+                if (!resolved) return false;
 
-                return re.includes(mod);
+                return resolved.includes(mod);
               } catch (err) {
                 return false;
               }
@@ -192,22 +198,35 @@ const withTmInitializer = (modules = [], options = {}) => {
         // Make hot reloading work!
         // FIXME: not working on Wepback 5
         // https://github.com/vercel/next.js/issues/13039
-        config.watchOptions.ignored = [...resolvedModules.map((mod) => `!${mod}/**`), ...config.watchOptions.ignored];
+        config.watchOptions.ignored = [
+          ...config.watchOptions.ignored.filter((pattern) => pattern !== '**/node_modules/**'),
+          `**node_modules/{${modules.map((mod) => `!(${mod})`).join(',')}}/**/*`,
+        ];
 
-        //dunno what to do about above
         if (isWebpack5) {
-          config.watchOptions.ignored = generateExcludes(modules);
+          const checkForTranspiledModules = (currentPath) =>
+            modules.find((mod) => {
+              return currentPath.includes(path.dirname(mod)) || currentPath.includes(mod);
+            });
+
+          const snapshot = Object.assign({}, config.snapshot);
+          const mainPkg = require(pkgUp.sync());
+          const simpleResolve = Object.keys({ ...mainPkg.dependencies, ...mainPkg.resolutions })
+            .map((key) => {
+              return pkgUp.sync({ cwd: resolve(__dirname, key) });
+            })
+            .filter((i) => {
+              return !checkForTranspiledModules(i);
+            });
+
+          config.snapshot = Object.assign(snapshot, {
+            managedPaths: simpleResolve,
+          });
 
           config.cache = {
             type: 'filesystem',
-            // paths dont seem to work
-            // might need better resolution to the paths. dirname can trim off "thepackage" from @company/thepackage
-            managedPaths: resolvedModules,
           };
-          // slow, real slow, but works
-          config.cache = false;
         }
-
         // Overload the Webpack config if it was already overloaded
         if (typeof nextConfig.webpack === 'function') {
           return nextConfig.webpack(config, options);
