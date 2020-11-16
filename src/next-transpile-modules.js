@@ -272,20 +272,30 @@ const withTmInitializer = (modules = [], options = {}) => {
           };
         }
 
-        //dunno what to do about above
         if (isWebpack5) {
-          config.watchOptions.ignored = generateExcludes(modules);
+          const checkForTranspiledModules = (currentPath) =>
+            modules.find((mod) => {
+              return currentPath.includes(path.dirname(mod)) || currentPath.includes(mod);
+            });
+
+          const snapshot = Object.assign({}, config.snapshot);
+          const mainPkg = require(pkgUp.sync());
+          const simpleResolve = Object.keys({ ...mainPkg.dependencies, ...mainPkg.resolutions })
+            .map((key) => {
+              return pkgUp.sync({ cwd: resolve(__dirname, key) });
+            })
+            .filter((i) => {
+              return !checkForTranspiledModules(i);
+            });
+
+          config.snapshot = Object.assign(snapshot, {
+            managedPaths: simpleResolve,
+          });
 
           config.cache = {
             type: 'filesystem',
-            // paths dont seem to work
-            // might need better resolution to the paths. dirname can trim off "thepackage" from @company/thepackage
-            managedPaths: resolvedModules,
           };
-          // slow, real slow, but works
-          config.cache = false;
         }
-
         // Overload the Webpack config if it was already overloaded
         if (typeof nextConfig.webpack === "function") {
           return nextConfig.webpack(config, options);
