@@ -15,6 +15,7 @@ const mainPkg = require(pkgUp.sync());
 const rootJson = findRootPackageJsonPath();
 const rootDirectory = path.dirname(rootJson);
 const symlinkedPackages = symlinked.paths(rootDirectory);
+const symlinkedPackageLinks = symlinked.links(rootDirectory);
 const rootPackageJson = require(rootJson);
 
 /**
@@ -297,12 +298,12 @@ const withTmInitializer = (modules = [], options = {}) => {
         if (isWebpack5) {
           const checkForTranspiledModules = (currentPath) =>
             modules.find((mod) => {
-              const isSymlinked = symlinkedPackages.find((sym) => {
-                return mod.startsWith(sym);
+              return symlinkedPackages.some((sym) => {
+                if (currentPath === pkgUp.sync({ cwd: sym })) {
+                  return true;
+                }
               });
-              if (isSymlinked) {
-                return false;
-              }
+              // not used for right now
               return currentPath.includes(path.dirname(mod)) || currentPath.includes(mod);
             });
 
