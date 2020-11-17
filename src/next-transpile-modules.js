@@ -16,6 +16,15 @@ const rootJson = findRootPackageJsonPath();
 const rootDirectory = path.dirname(rootJson);
 const symlinkedPackages = symlinked.paths(rootDirectory);
 const rootPackageJson = require(rootJson);
+
+/**
+ * We create our own Node.js resolver that can ignore symlinks resolution and
+ * can support PnP
+ */
+const resolve = enhancedResolve.create.sync({
+  symlinks: false,
+});
+
 const mainPackages = Object.keys({
   ...mainPkg.dependencies,
   ...mainPkg.peerDependencies,
