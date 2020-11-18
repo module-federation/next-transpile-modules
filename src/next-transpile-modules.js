@@ -336,10 +336,6 @@ const withTmInitializer = (modules = [], options = {}) => {
           config.snapshot = Object.assign(snapshot, {
             managedPaths: cacheablePackages,
           });
-
-          config.cache = {
-            type: 'memory',
-          };
         }
         // Overload the Webpack config if it was already overloaded
         if (typeof nextConfig.webpack === "function") {
