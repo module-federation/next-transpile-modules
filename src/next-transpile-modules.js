@@ -178,7 +178,6 @@ const withTmInitializer = (modules = [], options = {}) => {
                 return false;
               }
             }
-
             // Otherwise, for relative imports
             return path.resolve(context, request).includes(mod);
           });
@@ -336,8 +335,8 @@ const withTmInitializer = (modules = [], options = {}) => {
           });
 
           config.cache = {
-            type: "memory"
-          }
+            type: 'memory',
+          };
         }
         // Overload the Webpack config if it was already overloaded
         if (typeof nextConfig.webpack === "function") {
