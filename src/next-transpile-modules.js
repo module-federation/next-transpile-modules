@@ -85,9 +85,18 @@ const generateResolvedModules = (modules) => {
 };
 
 /**
+ * Logger for the debug mode
+ */
+const createLogger = (enable) => {
+  return (message, force) => {
+    if (enable || force) console.info(`next-transpile-modules - ${message}`);
+  };
+};
+
+/**
  * Transpile modules with Next.js Babel configuration
  * @param {string[]} modules
- * @param {{resolveSymlinks?: boolean; unstable_webpack5?: boolean}} options
+ * @param {{resolveSymlinks?: boolean; debug?: boolean, unstable_webpack5?: boolean}} options
  */
 const withTmInitializer = (modules = [], options = {}) => {
   const withTM = (nextConfig = {}) => {
@@ -95,12 +104,32 @@ const withTmInitializer = (modules = [], options = {}) => {
 
     const resolveSymlinks = options.resolveSymlinks || false;
     const isWebpack5 = options.unstable_webpack5 || false;
+    const debug = options.debug || false;
+
+    const logger = createLogger(debug);
 
     const resolvedModules = generateResolvedModules(modules);
+
+    if (isWebpack5) logger(`WARNING experimental Webpack 5 support enabled`, true);
+
+    logger(`the following paths will get transpiled:\n${resolvedModules.map((mod) => `  - ${mod}`).join('\n')}`);
 
     // Generate Webpack condition for the passed modules
     // https://webpack.js.org/configuration/module/#ruleinclude
     const match = (request) =>
+      resolvedModules.some((modulePath) => {
+        // try and resolve as is
+        let transpiled = request.includes(modulePath);
+        // take request and find root package
+        const resolveRequestRoot = path.dirname(pkgUp.sync({ cwd: request }));
+        if (!transpiled) transpiled = resolveRequestRoot.includes(modulePath);
+        // take transpiled module and find root package
+        const resolvePackageRoot = path.dirname(pkgUp.sync({ cwd: modulePath }));
+        if (!transpiled) transpiled = resolveRequestRoot.includes(resolvePackageRoot);
+        logger(`${transpiled} ${request}`);
+        return transpiled;
+      });
+    const match2 = (request) =>
       resolvedModules.some((modulePath) => {
         const resolveRequestRoot = path.dirname(pkgUp.sync({ cwd: request }));
         if (resolveRequestRoot.includes(modulePath)) {
@@ -113,21 +142,6 @@ const withTmInitializer = (modules = [], options = {}) => {
         }
 
         return request.includes(modulePath);
-      });
-
-    const unmatch = (request) =>
-      resolvedModules.every((modulePath) => {
-        const resolveRequestRoot = path.dirname(pkgUp.sync({ cwd: request }));
-        if (!resolveRequestRoot.includes(modulePath)) {
-          return true;
-        }
-        const resolvePackageRoot = path.dirname(pkgUp.sync({ cwd: modulePath }));
-
-        if (!resolveRequestRoot.includes(resolvePackageRoot)) {
-          return true;
-        }
-
-        !request.includes(modulePath);
       });
 
     return Object.assign({}, nextConfig, {
@@ -145,13 +159,13 @@ const withTmInitializer = (modules = [], options = {}) => {
         // transpiled.
         config.resolve.symlinks = resolveSymlinks;
 
-        const hasInclude = (ctx, req) => {
+        const hasInclude = (context, request) => {
           const test = resolvedModules.some((mod) => {
             // If we the code requires/import an absolute path
-            if (!req.startsWith('.')) {
+            if (!request.startsWith('.')) {
               try {
-                const resolved = resolve(__dirname, req);
-                console.log(resolved);
+                const resolved = resolve(__dirname, request);
+
                 if (!resolved) return false;
 
                 return resolved.includes(mod);
@@ -159,9 +173,9 @@ const withTmInitializer = (modules = [], options = {}) => {
                 return false;
               }
             }
-            console.log(path.resolve(ctx, req));
+
             // Otherwise, for relative imports
-            return path.resolve(ctx, req).includes(mod);
+            return path.resolve(context, request).includes(mod);
           });
 
           return test;
@@ -178,8 +192,8 @@ const withTmInitializer = (modules = [], options = {}) => {
               };
             }
 
-            return (ctx, req, cb) => {
-              return hasInclude(ctx, req) ? cb() : external(ctx, req, cb);
+            return (context, request, cb) => {
+              return hasInclude(context, request) ? cb() : external(context, request, cb);
             };
           });
         }
@@ -215,7 +229,7 @@ const withTmInitializer = (modules = [], options = {}) => {
 
           if (nextCssLoader) {
             nextCssLoader.issuer.or = nextCssLoader.issuer.and ? nextCssLoader.issuer.and.concat(match) : match;
-            nextCssLoader.issuer.not = [unmatch];
+            delete nextCssLoader.issuer.not;
             delete nextCssLoader.issuer.and;
           } else {
             console.warn('next-transpile-modules: could not find default CSS rule, CSS imports may not work');
@@ -223,7 +237,7 @@ const withTmInitializer = (modules = [], options = {}) => {
 
           if (nextSassLoader) {
             nextSassLoader.issuer.or = nextSassLoader.issuer.and ? nextSassLoader.issuer.and.concat(match) : match;
-            nextSassLoader.issuer.not = [unmatch];
+            delete nextSassLoader.issuer.not;
             delete nextSassLoader.issuer.and;
           } else {
             console.warn('next-transpile-modules: could not find default SASS rule, SASS imports may not work');
