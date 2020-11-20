@@ -1,6 +1,8 @@
 const path = require('path');
 const enhancedResolve = require('enhanced-resolve');
 const pkgUp = require('pkg-up');
+const { findRootPackageJsonPath } = require('@kiwicom/monorepo-utils');
+const symlinked = require('symlinked');
 
 // Use me when needed
 // const util = require('util');
@@ -8,12 +10,28 @@ const pkgUp = require('pkg-up');
 //   console.log(util.inspect(object, { showHidden: false, depth: null }));
 // };
 
+const mainPkg = require(pkgUp.sync());
+const rootJson = findRootPackageJsonPath();
+const rootDirectory = path.dirname(rootJson);
+const symlinkedPackages = symlinked.paths(rootDirectory);
+const symlinkedPackageLinks = symlinked.links(rootDirectory);
+const rootPackageJson = require(rootJson);
+
 /**
  * We create our own Node.js resolver that can ignore symlinks resolution and
  * can support PnP
  */
 const resolve = enhancedResolve.create.sync({
   symlinks: false,
+});
+
+const mainPackages = Object.keys({
+  ...mainPkg.dependencies,
+  ...mainPkg.peerDependencies,
+  ...rootPackageJson.dependencies,
+  ...rootPackageJson.peerDependencies,
+}).map((key) => {
+  return pkgUp.sync({ cwd: resolve(__dirname, key) });
 });
 
 /**
@@ -34,28 +52,11 @@ const regexEqual = (x, y) => {
   );
 };
 
-const PATH_DELIMITER = '[\\\\/]'; // match 2 antislashes or one slash
-
-const safePath = (module) => module.split(/[\\\/]/g).join(PATH_DELIMITER);
-
-const generateExcludes = (modules) => {
-  return new RegExp(
-    `node_modules${PATH_DELIMITER}(?!(${modules.map(safePath).join('|')})(${PATH_DELIMITER}|$)(?!.*node_modules))`
-  );
-};
-
-const generateIncludes = (modules) => {
-  return [
-    new RegExp(`(${modules.map(safePath).join('|')})$`),
-    new RegExp(`(${modules.map(safePath).join('|')})${PATH_DELIMITER}(?!.*node_modules)`),
-  ];
-};
-
 /**
  * Resolve modules to their real paths
  * @param {string[]} modules
  */
-const generateResolvedModules = modules => {
+const generateResolvedModules = (modules) => {
   const resolvedModules = modules
     .map((module) => {
       let resolved;
@@ -63,16 +64,23 @@ const generateResolvedModules = modules => {
       try {
         resolved = resolve(__dirname, module);
       } catch (e) {
-        console.error(e);
+        try {
+          resolved = resolve(__dirname, path.join(module, 'package.json'));
+        } catch (fallbackError) {
+          console.error(e);
+          console.error(fallbackError);
+        }
       }
 
       if (!resolved)
         throw new Error(
           `next-transpile-modules: could not resolve module "${module}". Are you sure the name of the module you are trying to transpile is correct?`
         );
+
       return resolved;
     })
     .map(path.dirname);
+
   return resolvedModules;
 };
 
@@ -92,8 +100,35 @@ const withTmInitializer = (modules = [], options = {}) => {
 
     // Generate Webpack condition for the passed modules
     // https://webpack.js.org/configuration/module/#ruleinclude
-    const match = (path) => resolvedModules.some((modulePath) => path.includes(modulePath));
-    const unmatch = (path) => resolvedModules.every((modulePath) => !path.includes(modulePath));
+    const match = (request) =>
+      resolvedModules.some((modulePath) => {
+        const resolveRequestRoot = path.dirname(pkgUp.sync({ cwd: request }));
+        if (resolveRequestRoot.includes(modulePath)) {
+          return true;
+        }
+        const resolvePackageRoot = path.dirname(pkgUp.sync({ cwd: modulePath }));
+
+        if (resolveRequestRoot.includes(resolvePackageRoot)) {
+          return true;
+        }
+
+        return request.includes(modulePath);
+      });
+
+    const unmatch = (request) =>
+      resolvedModules.every((modulePath) => {
+        const resolveRequestRoot = path.dirname(pkgUp.sync({ cwd: request }));
+        if (!resolveRequestRoot.includes(modulePath)) {
+          return true;
+        }
+        const resolvePackageRoot = path.dirname(pkgUp.sync({ cwd: modulePath }));
+
+        if (!resolveRequestRoot.includes(resolvePackageRoot)) {
+          return true;
+        }
+
+        !request.includes(modulePath);
+      });
 
     return Object.assign({}, nextConfig, {
       webpack(config, options) {
@@ -116,7 +151,7 @@ const withTmInitializer = (modules = [], options = {}) => {
             if (!req.startsWith('.')) {
               try {
                 const resolved = resolve(__dirname, req);
-
+                console.log(resolved);
                 if (!resolved) return false;
 
                 return resolved.includes(mod);
@@ -124,7 +159,7 @@ const withTmInitializer = (modules = [], options = {}) => {
                 return false;
               }
             }
-
+            console.log(path.resolve(ctx, req));
             // Otherwise, for relative imports
             return path.resolve(ctx, req).includes(mod);
           });
@@ -195,36 +230,56 @@ const withTmInitializer = (modules = [], options = {}) => {
           }
         }
 
-        // Make hot reloading work!
-        // FIXME: not working on Wepback 5
-        // https://github.com/vercel/next.js/issues/13039
         config.watchOptions.ignored = [
           ...config.watchOptions.ignored.filter((pattern) => pattern !== '**/node_modules/**'),
           `**node_modules/{${modules.map((mod) => `!(${mod})`).join(',')}}/**/*`,
         ];
 
-        if (isWebpack5) {
+        if (isWebpack5 && options.dev) {
+          // HMR magic
           const checkForTranspiledModules = (currentPath) =>
             modules.find((mod) => {
+              return symlinkedPackages.some((sym) => {
+                if (currentPath === pkgUp.sync({ cwd: sym })) {
+                  return true;
+                }
+              });
+              // not used for right now
               return currentPath.includes(path.dirname(mod)) || currentPath.includes(mod);
             });
 
           const snapshot = Object.assign({}, config.snapshot);
-          const mainPkg = require(pkgUp.sync());
-          const simpleResolve = Object.keys({ ...mainPkg.dependencies, ...mainPkg.resolutions })
-            .map((key) => {
-              return pkgUp.sync({ cwd: resolve(__dirname, key) });
-            })
-            .filter((i) => {
-              return !checkForTranspiledModules(i);
+
+          const subPackages = resolvedModules.reduce((acc, module) => {
+            const pkg = require(path.join(pkgUp.sync({ cwd: module })));
+            let allPossibleModules = Object.keys({
+              ...pkg.dependencies,
+              ...pkg.peerDependencies,
+            });
+            allPossibleModules = Array.from(new Set([...allPossibleModules]));
+
+            allPossibleModules.forEach((key) => {
+              const resolveFrom = path.dirname(pkgUp.sync({ cwd: module }));
+              try {
+                acc.push(pkgUp.sync({ cwd: resolve(resolveFrom, key) }));
+              } catch (e) {
+                console.log('error resolving', key);
+              }
             });
 
+            return acc;
+          }, []);
+
+          const cacheablePackages = Array.from(new Set([...mainPackages, ...subPackages])).filter((i) => {
+            return !checkForTranspiledModules(i);
+          });
+
           config.snapshot = Object.assign(snapshot, {
-            managedPaths: simpleResolve,
+            managedPaths: cacheablePackages,
           });
 
           config.cache = {
-            type: 'filesystem',
+            type: 'memory',
           };
         }
         // Overload the Webpack config if it was already overloaded
