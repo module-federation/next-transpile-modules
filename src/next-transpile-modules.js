@@ -319,7 +319,11 @@ const withTmInitializer = (modules = [], options = {}) => {
               try {
                 acc.push(pkgUp.sync({ cwd: resolve(resolveFrom, key) }));
               } catch (e) {
-                console.log('error resolving', key);
+                try {
+                  console.log(pkgUp.sync({ cwd: path.dirname(resolve(resolveFrom, path.join(key,'package.json'))) }))
+                } catch (e) {
+                  console.log('error resolving', key);
+                }
               }
             });
 
