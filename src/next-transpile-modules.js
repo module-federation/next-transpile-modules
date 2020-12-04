@@ -15,7 +15,6 @@ const mainPkg = require(pkgUp.sync());
 const rootJson = findRootPackageJsonPath();
 const rootDirectory = path.dirname(rootJson);
 const symlinkedPackages = symlinked.paths(rootDirectory);
-const symlinkedPackageLinks = symlinked.links(rootDirectory);
 const rootPackageJson = require(rootJson);
 
 /**
