@@ -1,5 +1,6 @@
 const path = require('path');
 const process = require('process');
+const fs = require('fs');
 
 const glob = require('glob');
 const enhancedResolve = require('enhanced-resolve');
@@ -11,9 +12,6 @@ const escalade = require('escalade/sync');
 //   console.log(util.inspect(object, { showHidden: false, depth: null }));
 // };
 
-import fs from 'fs';
-import path from 'path';
-
 let MEMOIZED_PATH = null;
 
 /**
@@ -22,16 +20,16 @@ let MEMOIZED_PATH = null;
  * also memoizes the computed path and returns it immediately with
  * the second call.
  */
-export function findRootPackageJson(directory = __dirname) {
+function findRootPackageJson(directory = __dirname) {
   const packageJsonPath = findRootPackageJsonPath(directory);
   return require(packageJsonPath);
 }
 
-export function findMonorepoRoot(directory = __dirname) {
+function findMonorepoRoot(directory = __dirname) {
   return path.dirname(findRootPackageJsonPath(directory));
 }
 
-export function findRootPackageJsonPath(directory = __dirname) {
+function findRootPackageJsonPath(directory = __dirname) {
   if (MEMOIZED_PATH !== null) {
     return MEMOIZED_PATH;
   }
