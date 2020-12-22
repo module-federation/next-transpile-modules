@@ -11,6 +11,53 @@ const escalade = require('escalade/sync');
 //   console.log(util.inspect(object, { showHidden: false, depth: null }));
 // };
 
+import fs from 'fs';
+import path from 'path';
+
+let MEMOIZED_PATH = null;
+
+/**
+ * It tries to find root package.json recursively starting from the
+ * provided path. It expects monorepo setup (defined workspaces). It
+ * also memoizes the computed path and returns it immediately with
+ * the second call.
+ */
+export function findRootPackageJson(directory = __dirname) {
+  const packageJsonPath = findRootPackageJsonPath(directory);
+  return require(packageJsonPath);
+}
+
+export function findMonorepoRoot(directory= __dirname) {
+  return path.dirname(findRootPackageJsonPath(directory));
+}
+
+export function findRootPackageJsonPath(directory = __dirname) {
+  if (MEMOIZED_PATH !== null) {
+    return MEMOIZED_PATH;
+  }
+
+  if (directory === '/') {
+    throw new Error('Unable to find root package.json file.');
+  }
+
+  const packageJSONPath = path.join(directory, 'package.json');
+
+  try {
+    fs.accessSync(packageJSONPath, fs.constants.F_OK);
+    // $FlowAllowDynamicImport
+    const packageJSON = require(packageJSONPath);
+    if (!packageJSON.workspaces) {
+      // not a root package.json
+      return findRootPackageJsonPath(path.dirname(directory));
+    }
+    MEMOIZED_PATH = packageJSONPath;
+    return packageJSONPath;
+  } catch (err) {
+    // package.json doesn't exist here
+    return findRootPackageJsonPath(path.dirname(directory));
+  }
+}
+
 const CWD = process.cwd();
 
 /**
@@ -109,6 +156,7 @@ const withTmInitializer = (modules = [], options = {}) => {
 
     const resolveSymlinks = options.resolveSymlinks || false;
     const isWebpack5 = options.unstable_webpack5 || false;
+    const resolveFromRoot = options.resolveFromRoot || false;
     const debug = options.debug || false;
 
     const logger = createLogger(debug);
@@ -247,8 +295,9 @@ const withTmInitializer = (modules = [], options = {}) => {
           const transpiledModuleDeps = modulesPaths.map((modulePath)=>{
             return path.join(modulePath,'node_modules')
           });
+          const workingDirectory = resolveFromRoot ? findRootPackageJsonPath(CWD) : CWD
 
-          glob("**/node_modules/**", { cwd: CWD }, function (er, files) {
+          glob("**/node_modules", { cwd: workingDirectory,nosort:true }, function (er, files) {
             console.log(files)
           })
           // HMR magic
