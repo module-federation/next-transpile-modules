@@ -5,7 +5,6 @@
   "license": "MIT",
   "author": "Pierre de la Martinière <pierre.de.la.martiniere@gmail.com>",
   "description": "Next.js plugin to transpile code from node_modules (supports TypeScript)",
-  "main": "src/next-transpile-modules.js",
   "files": [
     "src/next-transpile-modules.js"
   ],
@@ -44,6 +43,7 @@
     "@kiwicom/monorepo-utils": "^0.24.0",
     "enhanced-resolve": "^5.3.2",
     "escalade": "^3.1.1",
+    "glob": "^7.1.6",
     "symlinked": "^0.5.0"
   },
   "devDependencies": {

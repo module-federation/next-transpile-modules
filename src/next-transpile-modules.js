@@ -1,6 +1,7 @@
 const path = require('path');
 const process = require('process');
 
+const glob = require("glob")
 const enhancedResolve = require('enhanced-resolve');
 const escalade = require('escalade/sync');
 
@@ -242,7 +243,14 @@ const withTmInitializer = (modules = [], options = {}) => {
         ];
 
         if (isWebpack5 && options.dev) {
-          console.log(modules)
+
+          const transpiledModuleDeps = modulesPaths.map((modulePath)=>{
+            return path.join(modulePath,'node_modules')
+          });
+
+          glob("**/node_modules/**", { cwd: CWD }, function (er, files) {
+            console.log(files)
+          })
           // HMR magic
           // const checkForTranspiledModules = (currentPath) =>
           //   modules.find((mod) => {
@@ -285,9 +293,9 @@ const withTmInitializer = (modules = [], options = {}) => {
           //   return !checkForTranspiledModules(i);
           // });
 
-          // config.snapshot = Object.assign(snapshot, {
-          //   managedPaths: cacheablePackages,
-          // });
+          config.snapshot = Object.assign(snapshot, {
+            managedPaths: transpiledModuleDeps,
+          });
           //
           // config.cache = {
           //   type: 'memory',
