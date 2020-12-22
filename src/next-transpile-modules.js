@@ -5,34 +5,13 @@ const enhancedResolve = require('enhanced-resolve');
 const escalade = require('escalade/sync');
 
 // Use me when needed
+// const util = require('util');
 // const inspect = (object) => {
 //   console.log(util.inspect(object, { showHidden: false, depth: null }));
 // };
 
 const CWD = process.cwd();
 
-const mainPkg = require(pkgUp.sync());
-const rootJson = findRootPackageJsonPath();
-const rootDirectory = path.dirname(rootJson);
-const symlinkedPackages = symlinked.paths(rootDirectory);
-const rootPackageJson = require(rootJson);
-
-/**
- * We create our own Node.js resolver that can ignore symlinks resolution and
- * can support PnP
- */
-const resolve = enhancedResolve.create.sync({
-  symlinks: false,
-});
-
-const mainPackages = Object.keys({
-  ...mainPkg.dependencies,
-  ...mainPkg.peerDependencies,
-  ...rootPackageJson.dependencies,
-  ...rootPackageJson.peerDependencies,
-}).map((key) => {
-  return pkgUp.sync({ cwd: resolve(__dirname, key) });
-});
 /**
  * Our own Node.js resolver that can ignore symlinks resolution and  can support
  * PnP
@@ -153,7 +132,7 @@ const withTmInitializer = (modules = [], options = {}) => {
         // Safecheck for Next < 5.0
         if (!options.defaultLoaders) {
           throw new Error(
-            "This plugin is not compatible with Next.js versions below 5.0.0 https://err.sh/next-plugins/upgrade"
+            'This plugin is not compatible with Next.js versions below 5.0.0 https://err.sh/next-plugins/upgrade'
           );
         }
 
@@ -177,6 +156,7 @@ const withTmInitializer = (modules = [], options = {}) => {
                 return false;
               }
             }
+
             // Otherwise, for relative imports
             return path.resolve(context, request).includes(mod);
           });
@@ -186,8 +166,8 @@ const withTmInitializer = (modules = [], options = {}) => {
 
         // Since Next.js 8.1.0, config.externals is undefined
         if (config.externals) {
-          config.externals = config.externals.map(external => {
-            if (typeof external !== "function") return external;
+          config.externals = config.externals.map((external) => {
+            if (typeof external !== 'function') return external;
 
             if (isWebpack5) {
               return ({ context, request }, cb) => {
@@ -206,7 +186,7 @@ const withTmInitializer = (modules = [], options = {}) => {
           config.module.rules.push({
             test: /\.+(js|jsx|mjs|ts|tsx)$/,
             use: options.defaultLoaders.babel,
-            include: match
+            include: match,
           });
 
           // IMPROVE ME: we are losing all the cache on node_modules, which is terrible
@@ -218,28 +198,22 @@ const withTmInitializer = (modules = [], options = {}) => {
           config.module.rules.push({
             test: /\.+(js|jsx|mjs|ts|tsx)$/,
             loader: options.defaultLoaders.babel,
-            include: match
+            include: match,
           });
         }
 
         // Support CSS modules + global in node_modules
         // TODO ask Next.js maintainer to expose the css-loader via defaultLoaders
-        const nextCssLoaders = config.module.rules.find(
-          rule => typeof rule.oneOf === "object"
-        );
+        const nextCssLoaders = config.module.rules.find((rule) => typeof rule.oneOf === 'object');
 
         // .module.css
         if (nextCssLoaders) {
           const nextCssLoader = nextCssLoaders.oneOf.find(
-            rule =>
-              rule.sideEffects === false &&
-              regexEqual(rule.test, /\.module\.css$/)
+            (rule) => rule.sideEffects === false && regexEqual(rule.test, /\.module\.css$/)
           );
 
           const nextSassLoader = nextCssLoaders.oneOf.find(
-            rule =>
-              rule.sideEffects === false &&
-              regexEqual(rule.test, /\.module\.(scss|sass)$/)
+            (rule) => rule.sideEffects === false && regexEqual(rule.test, /\.module\.(scss|sass)$/)
           );
 
           if (nextCssLoader) {
@@ -257,97 +231,75 @@ const withTmInitializer = (modules = [], options = {}) => {
           } else {
             console.warn('next-transpile-modules - could not find default SASS rule, SASS imports may not work');
           }
-
-          // Hack our way to disable errors on node_modules CSS modules
-          const nextErrorCssModuleLoader = nextCssLoaders.oneOf.find(
-            (rule) =>
-              rule.use &&
-              rule.use.loader === 'error-loader' &&
-              rule.use.options &&
-              (rule.use.options.reason ===
-                'CSS Modules \u001b[1mcannot\u001b[22m be imported from within \u001b[1mnode_modules\u001b[22m.\n' +
-                  'Read more: https://err.sh/next.js/css-modules-npm' ||
-                rule.use.options.reason ===
-                  'CSS Modules cannot be imported from within node_modules.\nRead more: https://err.sh/next.js/css-modules-npm')
-          );
-
-          if (nextErrorCssModuleLoader) {
-            nextErrorCssModuleLoader.exclude = includes;
-          }
         }
-        config.watchOptions.ignored.push = console.log
 
+        // Make hot reloading work!
+        // FIXME: not working on Wepback 5
+        // https://github.com/vercel/next.js/issues/13039
         config.watchOptions.ignored = [
           ...config.watchOptions.ignored.filter((pattern) => pattern !== '**/node_modules/**'),
           `**node_modules/{${modules.map((mod) => `!(${mod})`).join(',')}}/**/*`,
         ];
 
         if (isWebpack5 && options.dev) {
-
-          config.cache = {
-            type: "filesystem",
-            managedPaths: Array.from(new Set(resolvedModules))
-          };
-        }
-
-        if (isWebpack5) {
+          console.log(modules)
           // HMR magic
-          const checkForTranspiledModules = (currentPath) =>
-            modules.find((mod) => {
-              return symlinkedPackages.some((sym) => {
-                if (currentPath === pkgUp.sync({ cwd: sym })) {
-                  return true;
-                }
-              });
-              // not used for right now
-              return currentPath.includes(path.dirname(mod)) || currentPath.includes(mod);
-            });
+          // const checkForTranspiledModules = (currentPath) =>
+          //   modules.find((mod) => {
+          //     return symlinkedPackages.some((sym) => {
+          //       if (currentPath === pkgUp.sync({ cwd: sym })) {
+          //         return true;
+          //       }
+          //     });
+          //     // not used for right now
+          //     return currentPath.includes(path.dirname(mod)) || currentPath.includes(mod);
+          //   });
 
           const snapshot = Object.assign({}, config.snapshot);
+          //
+          // const subPackages = resolvedModules.reduce((acc, module) => {
+          //   const pkg = require(path.join(pkgUp.sync({ cwd: module })));
+          //   let allPossibleModules = Object.keys({
+          //     ...pkg.dependencies,
+          //     ...pkg.peerDependencies,
+          //   });
+          //   allPossibleModules = Array.from(new Set([...allPossibleModules]));
+          //
+          //   allPossibleModules.forEach((key) => {
+          //     const resolveFrom = path.dirname(pkgUp.sync({ cwd: module }));
+          //     try {
+          //       acc.push(pkgUp.sync({ cwd: resolve(resolveFrom, key) }));
+          //     } catch (e) {
+          //       try {
+          //         console.log(pkgUp.sync({ cwd: path.dirname(resolve(resolveFrom, path.join(key,'package.json'))) }))
+          //       } catch (e) {
+          //         console.log('error resolving', key);
+          //       }
+          //     }
+          //   });
+          //
+          //   return acc;
+          // }, []);
+          //
+          // const cacheablePackages = Array.from(new Set([...mainPackages, ...subPackages])).filter((i) => {
+          //   return !checkForTranspiledModules(i);
+          // });
 
-          const subPackages = resolvedModules.reduce((acc, module) => {
-            const pkg = require(path.join(pkgUp.sync({ cwd: module })));
-            let allPossibleModules = Object.keys({
-              ...pkg.dependencies,
-              ...pkg.peerDependencies,
-            });
-            allPossibleModules = Array.from(new Set([...allPossibleModules]));
-
-            allPossibleModules.forEach((key) => {
-              const resolveFrom = path.dirname(pkgUp.sync({ cwd: module }));
-              try {
-                acc.push(pkgUp.sync({ cwd: resolve(resolveFrom, key) }));
-              } catch (e) {
-                try {
-                  console.log(pkgUp.sync({ cwd: path.dirname(resolve(resolveFrom, path.join(key,'package.json'))) }))
-                } catch (e) {
-                  console.log('error resolving', key);
-                }
-              }
-            });
-
-            return acc;
-          }, []);
-
-          const cacheablePackages = Array.from(new Set([...mainPackages, ...subPackages])).filter((i) => {
-            return !checkForTranspiledModules(i);
-          });
-
-          config.snapshot = Object.assign(snapshot, {
-            managedPaths: cacheablePackages,
-          });
-
-          config.cache = {
-            type: 'memory',
-          };
+          // config.snapshot = Object.assign(snapshot, {
+          //   managedPaths: cacheablePackages,
+          // });
+          //
+          // config.cache = {
+          //   type: 'memory',
+          // };
         }
         // Overload the Webpack config if it was already overloaded
-        if (typeof nextConfig.webpack === "function") {
+        if (typeof nextConfig.webpack === 'function') {
           return nextConfig.webpack(config, options);
         }
 
         return config;
-      }
+      },
     });
   };
 
