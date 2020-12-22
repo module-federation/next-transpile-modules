@@ -1,7 +1,7 @@
 const path = require('path');
 const process = require('process');
 
-const glob = require("glob")
+const glob = require('glob');
 const enhancedResolve = require('enhanced-resolve');
 const escalade = require('escalade/sync');
 
@@ -27,7 +27,7 @@ export function findRootPackageJson(directory = __dirname) {
   return require(packageJsonPath);
 }
 
-export function findMonorepoRoot(directory= __dirname) {
+export function findMonorepoRoot(directory = __dirname) {
   return path.dirname(findRootPackageJsonPath(directory));
 }
 
@@ -291,15 +291,14 @@ const withTmInitializer = (modules = [], options = {}) => {
         ];
 
         if (isWebpack5 && options.dev) {
-
-          const transpiledModuleDeps = modulesPaths.map((modulePath)=>{
-            return path.join(modulePath,'node_modules')
+          const transpiledModuleDeps = modulesPaths.map((modulePath) => {
+            return path.join(modulePath, 'node_modules');
           });
-          const workingDirectory = resolveFromRoot ? findRootPackageJsonPath(CWD) : CWD
+          const workingDirectory = resolveFromRoot ? findRootPackageJsonPath(CWD) : CWD;
 
-          glob("**/node_modules", { cwd: workingDirectory,nosort:true }, function (er, files) {
-            console.log(files)
-          })
+          glob('**/node_modules', { cwd: workingDirectory, nosort: true }, function (er, files) {
+            console.log(files);
+          });
           // HMR magic
           // const checkForTranspiledModules = (currentPath) =>
           //   modules.find((mod) => {
