@@ -295,17 +295,21 @@ const withTmInitializer = (modules = [], options = {}) => {
 
           const workingDirectory = resolveFromRoot ? path.dirname(findRootPackageJsonPath(CWD)) : CWD;
           const globbedFiles = glob.sync('**/node_modules/', { cwd: workingDirectory, nosort: true, absolute: true });
-          new Set([...globbedFiles]);
+          let rootNodeModules = [];
 
-          // console.log(globbedFiles);
-          // console.log(modulesPaths);
           if (fs.existsSync(path.join(workingDirectory, 'node_modules'))) {
-            fs.readdirSync(path.join(workingDirectory, 'node_modules')).forEach((topModule) => {
-              if (!topModule.startsWith('.')) {
-                console.log(resolve(workingDirectory, topModule));
-              }
+            rootNodeModules = glob.sync('*/package.json', {
+              cwd: path.join(workingDirectory, 'node_modules'),
+              nosort: true,
+              absolute: true
             });
           }
+          const managedPathsSet = new Set([...globbedFiles, ...rootNodeModules]);
+          const managedPaths = Array.from(managedPathsSet).filter((i) => {
+            return transpiledModuleDeps.some((transpiledPath) => {
+              return !transpiledPath.includes(i);
+            });
+          });
           // HMR magic
           // const checkForTranspiledModules = (currentPath) =>
           //   modules.find((mod) => {
@@ -347,9 +351,8 @@ const withTmInitializer = (modules = [], options = {}) => {
           // const cacheablePackages = Array.from(new Set([...mainPackages, ...subPackages])).filter((i) => {
           //   return !checkForTranspiledModules(i);
           // });
-
           config.snapshot = Object.assign(snapshot, {
-            managedPaths: globbedFiles
+            managedPaths: managedPaths
           });
           //
           // config.cache = {
