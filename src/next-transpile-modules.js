@@ -65,7 +65,7 @@ const CWD = process.cwd();
 const resolve = enhancedResolve.create.sync({
   symlinks: false,
   extensions: ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.css', '.scss', '.sass'],
-  mainFields: ['main', 'source'],
+  mainFields: ['main', 'source']
 });
 
 /**
@@ -233,19 +233,19 @@ const withTmInitializer = (modules = [], options = {}) => {
           config.module.rules.push({
             test: /\.+(js|jsx|mjs|ts|tsx)$/,
             use: options.defaultLoaders.babel,
-            include: match,
+            include: match
           });
 
           // IMPROVE ME: we are losing all the cache on node_modules, which is terrible
           // The problem is managedPaths does not allow to isolate specific specific folders
           config.snapshot = Object.assign(config.snapshot || {}, {
-            managedPaths: [],
+            managedPaths: []
           });
         } else {
           config.module.rules.push({
             test: /\.+(js|jsx|mjs|ts|tsx)$/,
             loader: options.defaultLoaders.babel,
-            include: match,
+            include: match
           });
         }
 
@@ -285,18 +285,27 @@ const withTmInitializer = (modules = [], options = {}) => {
         // https://github.com/vercel/next.js/issues/13039
         config.watchOptions.ignored = [
           ...config.watchOptions.ignored.filter((pattern) => pattern !== '**/node_modules/**'),
-          `**node_modules/{${modules.map((mod) => `!(${mod})`).join(',')}}/**/*`,
+          `**node_modules/{${modules.map((mod) => `!(${mod})`).join(',')}}/**/*`
         ];
 
         if (isWebpack5 && options.dev) {
           const transpiledModuleDeps = modulesPaths.map((modulePath) => {
             return path.join(modulePath, 'node_modules');
           });
-          const workingDirectory = resolveFromRoot ? findRootPackageJsonPath(CWD) : CWD;
 
-          glob('**/node_modules', { cwd: workingDirectory, nosort: true }, function (er, files) {
-            console.log(files);
-          });
+          const workingDirectory = resolveFromRoot ? path.dirname(findRootPackageJsonPath(CWD)) : CWD;
+          const globbedFiles = glob.sync('**/node_modules/', { cwd: workingDirectory, nosort: true, absolute: true });
+          new Set([...globbedFiles]);
+
+          // console.log(globbedFiles);
+          // console.log(modulesPaths);
+          if (fs.existsSync(path.join(workingDirectory, 'node_modules'))) {
+            fs.readdirSync(path.join(workingDirectory, 'node_modules')).forEach((topModule) => {
+              if (!topModule.startsWith('.')) {
+                console.log(resolve(workingDirectory, topModule));
+              }
+            });
+          }
           // HMR magic
           // const checkForTranspiledModules = (currentPath) =>
           //   modules.find((mod) => {
@@ -340,7 +349,7 @@ const withTmInitializer = (modules = [], options = {}) => {
           // });
 
           config.snapshot = Object.assign(snapshot, {
-            managedPaths: transpiledModuleDeps,
+            managedPaths: globbedFiles
           });
           //
           // config.cache = {
@@ -353,7 +362,7 @@ const withTmInitializer = (modules = [], options = {}) => {
         }
 
         return config;
-      },
+      }
     });
   };
 
