@@ -2,11 +2,16 @@
 
 ![Build Status](https://github.com/martpie/next-transpile-modules/workflows/tests/badge.svg)
 ![Dependencies](https://img.shields.io/david/martpie/next-transpile-modules)
+[![sponsor: Creative Tim](https://img.shields.io/badge/sponsor-Creative%20Tim-blue)](https://creative-tim.com/?affiliate_id=140482)
 
-Transpile untranspiled modules from `node_modules` using the Next.js Babel configuration.
+
+Transpile modules from `node_modules` using the Next.js Babel configuration.
+
 Makes it easy to have local libraries and keep a slick, manageable dev experience.
 
-Supports all extensions supported by Next.js: `.js`, `.jsx`, `.ts`, `.tsx`, `.mjs`, `.css`, `.scss` and `.sass`.
+- Supports transpilation of all extensions supported by Next.js: `.js`, `.jsx`, `.ts`, `.tsx`, `.mjs`, `.css`, `.scss` and `.sass`
+- Enable hot-reloading on local packages
+- Most setups should work out of the box (npm, yarn, pnpm, ...)
 
 ## What problems does it solve?
 
@@ -21,14 +26,14 @@ What this plugin **does not aim** to solve:
 
 ## Compatibility table
 
-| Next.js version | Plugin version |
-| --------------- | -------------- |
-| Next.js 9.5+    | 4.x            |
-| Next.js 9.2     | 3.x            |
-| Next.js 8 / 9   | 2.x            |
-| Next.js 6 / 7   | 1.x            |
+| Next.js version   | Plugin version |
+| ----------------- | -------------- |
+| Next.js 9.5+ / 10 | 4.x, 5.x, 6.x  |
+| Next.js 9.2       | 3.x            |
+| Next.js 8 / 9     | 2.x            |
+| Next.js 6 / 7     | 1.x            |
 
-Latest version tested: **9.5.4**.
+Latest version tested: **10.0.0**.
 
 ## Installation
 
@@ -49,7 +54,9 @@ yarn add next-transpile-modules
 - `transpileModules` String[]: modules to be transpiled
 - `options` Object (optional)
   - `resolveSymlinks` Boolean: Enable symlinks resolution to their real path by Webpack (most of the time, you won't want that) (default to `false`)
+  - `debug` Boolean: Display some informative logs in the console (can get noisy!) (default to `false`)
   - `unstable_webpack5` Boolean: Enable [Next.js Webpack 5 support](https://nextjs.org/blog/next-9-5#webpack-5-support-beta) (experimental) (default to `false`)
+  - `resolveFromRoot` Boolean: if CWD is not the root (like in a monorepo) and you want to resolve from the root monorepo
 
 **note:** unstable features may break in any patch or minor release without any warning, be careful!
 
@@ -69,7 +76,11 @@ const withTM = require('next-transpile-modules')(['somemodule', 'and-another'], 
 module.exports = withTM();
 ```
 
-**note:** please declare `withTM` as your last plugin (the "most nested" one).
+**Notes:**
+
+- please declare `withTM` as your last plugin (the "most nested" one).
+- make sure all your packages have [a valid `main` field](https://docs.npmjs.com/cli/v6/configuring-npm/package-json#main).
+- there is currently no way to transpile only parts of a package, it's all or nothing
 
 ### Scoped packages
 
@@ -188,25 +199,15 @@ more:
 - check the [compatibility table](#compatibility-table) of this plugin
 - read more about semver and version resolutions: https://docs.npmjs.com/misc/semver
 
-### I have trouble making it work with Next.js 7
+### I have trouble making it work after upgrading to v5/v6
 
-Next.js 7 introduced Webpack 4 and Babel 7, [which changed a couple of things](https://github.com/zeit/next.js/issues/5393#issuecomment-458517433), especially for TypeScript and Flow plugins.
-
-If you have a transpilation error when loading a page, check that your `babel.config.js` is up to date and valid, [you may have forgotten a preset](https://github.com/martpie/next-transpile-modules/issues/1#issuecomment-427749256) there.
-
-### I have trouble with transpilation and Flow/TypeScript
-
-In your Next.js app, make sure you use a `babel.config.js` and not a `.babelrc` as Babel's configuration file (see explanation below).
-
-**Since Next.js 9, you probably don't need that file anymore**, as TypeScript is supported natively.
-
-### I have trouble with transpilation and Yarn workspaces
-
-If you get a transpilation error when using Yarn workspaces, make sure you are using a `babel.config.js` and not a `.babelrc`. The former is [a project-wide Babel configuration](https://babeljs.io/docs/en/config-files), when the latter works for relative paths only (and won't work as Yarn install dependencies in a parent directory).
+Please make sure to [read the changelog](https://github.com/martpie/next-transpile-modules/releases).
 
 ### I have trouble with transpilation and my custom `.babelrc`
 
-Make sure you are using a `babel.config.js` and not a `.babelrc`. The former is [a project-wide Babel configuration](https://babeljs.io/docs/en/config-files), when the latter works for relative paths only.
+If you get a transpilation error when using a custom Babel configuration, make sure you are using a `babel.config.js` and not a `.babelrc`.
+
+The former is [a project-wide Babel configuration](https://babeljs.io/docs/en/config-files), when the latter works for relative paths only (and may not work for Yarn for example, as it installs dependencies in a parent directory).
 
 ### I have trouble with Yarn and hot reloading
 
@@ -216,7 +217,7 @@ You can go back to `npm`, or use Yarn workspaces. See [an example](https://githu
 
 ### I have trouble making it work with Lerna
 
-Lerna's purpose is to publish different packages from a monorepo, **it does not help for and does not intend to help local development with local modules** (<- this, in caps).
+Lerna's purpose is to publish different packages from a monorepo, **it does not help for and does not intend to help local development with local modules** (<- this, **IN CAPS**).
 
 This is not coming from me, but [from Lerna's maintainer](https://github.com/lerna/lerna/issues/1243#issuecomment-401396850).
 
@@ -235,11 +236,11 @@ module.exports = withTM({
       ...config.resolve.alias,
       // Will make webpack look for these modules in parent directories
       '@your-project/shared': require.resolve('@your-project/shared'),
-      '@your-project/styleguide': require.resolve('@your-project/styleguide')
+      '@your-project/styleguide': require.resolve('@your-project/styleguide'),
       // ...
     };
     return config;
-  }
+  },
 });
 ```
 
@@ -270,3 +271,11 @@ module.exports = withTM({
 Please note, the above [will only work](https://github.com/zeit/next.js/issues/9022#issuecomment-610255555) if `react` is properly declared as `peerDependencies` or `devDependencies` in your referenced package.
 
 It is not a great solution, but it works. Any help to find a more future-proof solution is welcome.
+
+## Credits
+
+All the honor goes to [James Gorrie](https://github.com/jamesgorrie) who created the first version of this plugin.
+
+## Credits
+
+All the honor goes to [James Gorrie](https://github.com/jamesgorrie) who created the first version of this plugin.

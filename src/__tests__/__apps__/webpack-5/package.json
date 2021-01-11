@@ -1,31 +1,12 @@
 {
-  "name": "test-webpack5",
-  "version": "1.0.0",
-  "description": "",
-  "private": "true",
-  "scripts": {
-    "dev": "cross-env NODE_PRESERVE_SYMLINKS=1 next",
-    "build": "cross-env NODE_PRESERVE_SYMLINKS=1 next build",
-    "start": "cross-env NODE_PRESERVE_SYMLINKS=1 next start"
-  },
-  "author": "Pierre de la Martinière <pierre.de.la.martiniere@gmail.com>",
-  "license": "MIT",
-  "dependencies": {
-    "lodash-es": "^4.17.15",
-    "next": "10.0.0",
-    "react": "^17.0.1",
-    "react-dom": "^17.0.1",
-    "sass": "^1.27.0",
-    "shared": "file:../_shared",
-    "shared-ts": "file:../_shared-ts",
-    "shared-ui": "file:../_shared-ui"
-  },
-  "devDependencies": {
-    "@types/react": "^16.9.53",
-    "@types/react-dom": "^16.9.8",
-    "cross-env": "^7.0.2"
-  },
+  "private": true,
+  "workspaces": [
+    "_shared",
+    "_shared-ts",
+    "_shared-ui",
+    "app"
+  ],
   "resolutions": {
-    "webpack": "5.0.0-beta.30"
+    "webpack": "^5.6.0"
   }
 }

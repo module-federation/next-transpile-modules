@@ -1,6 +1,6 @@
 const npmBasicAppPath = 'src/__tests__/__apps__/npm-basic';
 const yarnWorkspacesAppPath = 'src/__tests__/__apps__/yarn-workspaces/app';
-const webpack5AppPath = 'src/__tests__/__apps__/webpack-5';
+const webpack5AppPath = 'src/__tests__/__apps__/webpack-5/app';
 const pnpmAppPath = 'src/__tests__/__apps__/pnpm';
 
 module.exports = {

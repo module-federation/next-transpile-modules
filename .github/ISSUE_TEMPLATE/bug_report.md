@@ -6,8 +6,10 @@ labels: ''
 assignees: ''
 ---
 
+<!-- PLEASE CHECK THE FOLLOWING CHECKBOXES OR YOUR ISSUE WILL GET CLOSED WITHOUT SUPPORT -->
+
 - [ ] I HAVE READ [THE FAQ](https://github.com/martpie/next-transpile-modules#faq) AND MY PROBLEM WAS NOT DESCRIBED THERE
-- [ ] I WILL GIVE 10$ TO CHARITY IF MY SOLUTION WAS ACTUALLY IN THE FAQ
+- [ ] I WILL GIVE 10$ TO CHARITY IF MY SOLUTION WAS ACTUALLY IN THE README/FAQ
 
 **Are you trying to transpile a local package or an npm package?**
 If an npm package, which one?
@@ -29,6 +31,8 @@ A clear and concise description of what you expected to happen.
 - `npm`/`yarn` version:
 - Operating System:
 - Webpack 4 or 5:
+
+<!-- if applicable, please add your next.config.js, information about the package you are trying to transpile, logs, worskapces/lerna, anything that can help -->
 
 **Additional context**
 Add any other context about the problem here.

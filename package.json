@@ -1,10 +1,10 @@
 {
   "name": "@module-federation/next-transpile-modules",
-  "version": "5.0.0-beta.5",
+  "version": "6.0.0-beta.3",
+  "main": "src/next-transpile-modules.js",
   "license": "MIT",
   "author": "Pierre de la Martinière <pierre.de.la.martiniere@gmail.com>",
   "description": "Next.js plugin to transpile code from node_modules (supports TypeScript)",
-  "main": "src/next-transpile-modules.js",
   "files": [
     "src/next-transpile-modules.js"
   ],
@@ -18,18 +18,18 @@
     "test:formatting:fix": "prettier --check \"**/*.js\" --write",
     "test:prepare:npm-basic": "npm run build --prefix=src/__tests__/__apps__/npm-basic",
     "test:prepare:yarn-worskpaces": "yarn --cwd src/__tests__/__apps__/yarn-workspaces/app run build",
-    "test:prepare:webpack-5": "yarn --cwd src/__tests__/__apps__/webpack-5 run build",
+    "test:prepare:webpack-5": "yarn --cwd src/__tests__/__apps__/webpack-5/app run build",
     "test:prepare:pnpm": "npm run build --prefix=src/__tests__/__apps__/pnpm",
     "test:prepare": "npm run test:prepare:npm-basic && npm run test:prepare:yarn-worskpaces && npm run test:prepare:webpack-5 && npm run test:prepare:pnpm"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/martpie/next-transpile-modules.git"
+    "url": "git+https://github.com/module-federation/next-transpile-modules.git"
   },
   "bugs": {
-    "url": "https://github.com/martpie/next-transpile-modules/issues"
+    "url": "https://github.com/module-federation/next-transpile-modules/issues"
   },
-  "homepage": "https://github.com/martpie/next-transpile-modules#readme",
+  "homepage": "https://github.com/module-federation/next-transpile-modules#readme",
   "keywords": [
     "next",
     "next.js",
@@ -40,28 +40,30 @@
     "webpack"
   ],
   "dependencies": {
-    "enhanced-resolve": "^5.3.1",
-    "pkg-up": "^3.1.0"
+    "@kiwicom/monorepo-utils": "^0.24.0",
+    "enhanced-resolve": "^5.3.2",
+    "escalade": "^3.1.1",
+    "glob": "^7.1.6",
+    "symlinked": "^0.5.0"
   },
   "devDependencies": {
     "@types/jest-environment-puppeteer": "4.4.0",
-    "anymatch": "^2.0.0",
-    "eslint": "^7.12.1",
+    "eslint": "^7.14.0",
     "eslint-config-prettier": "^6.15.0",
     "eslint-config-semistandard": "^15.0.1",
     "eslint-plugin-import": "^2.22.1",
-    "eslint-plugin-jest": "^24.1.0",
+    "eslint-plugin-jest": "^24.1.3",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-promise": "^4.2.1",
-    "eslint-plugin-standard": "^4.0.2",
+    "eslint-plugin-standard": "^5.0.0",
     "fs-extra": "^9.0.1",
     "jest": "^26.6.3",
     "jest-environment-node": "^26.6.2",
     "jest-environment-puppeteer": "^4.4.0",
     "jest-puppeteer": "^4.4.0",
-    "prettier": "^2.1.2",
-    "prettier-eslint": "^11.0.0",
-    "puppeteer": "^5.4.1",
+    "prettier": "^2.2.0",
+    "prettier-eslint": "^12.0.0",
+    "puppeteer": "^5.5.0",
     "rewire": "^4.0.1",
     "webpack": "^4.44.0"
   }

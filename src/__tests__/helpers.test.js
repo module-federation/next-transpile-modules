@@ -1,5 +1,4 @@
 const rewire = require('rewire');
-const anymatch = require('anymatch');
 
 const withTmRewire = rewire('../next-transpile-modules');
 

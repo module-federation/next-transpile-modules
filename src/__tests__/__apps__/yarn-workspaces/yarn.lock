@@ -4585,15 +4585,6 @@ sha.js@^2.4.0, sha.js@^2.4.8:
     inherits "^2.0.1"
     safe-buffer "^5.0.1"
 
-"shared-ts@file:_shared-ts":
-  version "1.0.0"
-
-"shared-ui@file:_shared-ui":
-  version "1.0.0"
-
-"shared@file:_shared":
-  version "1.0.0"
-
 sharp@0.26.2:
   version "0.26.2"
   resolved "https://registry.yarnpkg.com/sharp/-/sharp-0.26.2.tgz#3d5777d246ae32890afe82a783c1cbb98456a88c"

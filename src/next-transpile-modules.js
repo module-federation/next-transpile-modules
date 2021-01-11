@@ -1,6 +1,10 @@
 const path = require('path');
+const process = require('process');
+const fs = require('fs');
+
+const glob = require('glob');
 const enhancedResolve = require('enhanced-resolve');
-const pkgUp = require('pkg-up');
+const escalade = require('escalade/sync');
 
 // Use me when needed
 // const util = require('util');
@@ -8,12 +12,60 @@ const pkgUp = require('pkg-up');
 //   console.log(util.inspect(object, { showHidden: false, depth: null }));
 // };
 
+let MEMOIZED_PATH = null;
+
 /**
- * We create our own Node.js resolver that can ignore symlinks resolution and
- * can support PnP
+ * It tries to find root package.json recursively starting from the
+ * provided path. It expects monorepo setup (defined workspaces). It
+ * also memoizes the computed path and returns it immediately with
+ * the second call.
+ */
+function findRootPackageJson(directory = __dirname) {
+  const packageJsonPath = findRootPackageJsonPath(directory);
+  return require(packageJsonPath);
+}
+
+function findMonorepoRoot(directory = __dirname) {
+  return path.dirname(findRootPackageJsonPath(directory));
+}
+
+function findRootPackageJsonPath(directory = __dirname) {
+  if (MEMOIZED_PATH !== null) {
+    return MEMOIZED_PATH;
+  }
+
+  if (directory === '/') {
+    throw new Error('Unable to find root package.json file.');
+  }
+
+  const packageJSONPath = path.join(directory, 'package.json');
+
+  try {
+    fs.accessSync(packageJSONPath, fs.constants.F_OK);
+    // $FlowAllowDynamicImport
+    const packageJSON = require(packageJSONPath);
+    if (!packageJSON.workspaces) {
+      // not a root package.json
+      return findRootPackageJsonPath(path.dirname(directory));
+    }
+    MEMOIZED_PATH = packageJSONPath;
+    return packageJSONPath;
+  } catch (err) {
+    // package.json doesn't exist here
+    return findRootPackageJsonPath(path.dirname(directory));
+  }
+}
+
+const CWD = process.cwd();
+
+/**
+ * Our own Node.js resolver that can ignore symlinks resolution and  can support
+ * PnP
  */
 const resolve = enhancedResolve.create.sync({
   symlinks: false,
+  extensions: ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.css', '.scss', '.sass'],
+  mainFields: ['main', 'source']
 });
 
 /**
@@ -34,52 +86,67 @@ const regexEqual = (x, y) => {
   );
 };
 
-const PATH_DELIMITER = '[\\\\/]'; // match 2 antislashes or one slash
+/**
+ * Return the root path (package.json directory) of a given module
+ * @param {string} module
+ */
+const getPackageRootDirectory = (module) => {
+  let packageDirectory;
+  let packageRootDirectory;
 
-const safePath = (module) => module.split(/[\\\/]/g).join(PATH_DELIMITER);
+  try {
+    // Get the module path
+    packageDirectory = resolve(CWD, module);
 
-const generateExcludes = (modules) => {
-  return new RegExp(
-    `node_modules${PATH_DELIMITER}(?!(${modules.map(safePath).join('|')})(${PATH_DELIMITER}|$)(?!.*node_modules))`
-  );
-};
+    if (!packageDirectory) {
+      throw new Error(
+        `next-transpile-modules - could not resolve module "${module}". Are you sure the name of the module you are trying to transpile is correct?`
+      );
+    }
 
-const generateIncludes = (modules) => {
-  return [
-    new RegExp(`(${modules.map(safePath).join('|')})$`),
-    new RegExp(`(${modules.map(safePath).join('|')})${PATH_DELIMITER}(?!.*node_modules)`),
-  ];
+    // Get the location of its package.json
+    const pkgPath = escalade(packageDirectory, (dir, names) => {
+      if (names.includes('package.json')) {
+        return 'package.json';
+      }
+      return false;
+    });
+    if (pkgPath == null) {
+      throw new Error(
+        `next-transpile-modules - an error happened when trying to get the root directory of "${module}". Is it missing a package.json?\n${err}`
+      );
+    }
+    packageRootDirectory = path.dirname(pkgPath);
+  } catch (err) {
+    throw new Error(`next-transpile-modules - an unexpected error happened when trying to resolve "${module}"\n${err}`);
+  }
+
+  return packageRootDirectory;
 };
 
 /**
  * Resolve modules to their real paths
  * @param {string[]} modules
  */
-const generateResolvedModules = modules => {
-  const resolvedModules = modules
-    .map((module) => {
-      let resolved;
+const generateModulesPaths = (modules) => {
+  const packagesPaths = modules.map(getPackageRootDirectory);
 
-      try {
-        resolved = resolve(__dirname, module);
-      } catch (e) {
-        console.error(e);
-      }
+  return packagesPaths;
+};
 
-      if (!resolved)
-        throw new Error(
-          `next-transpile-modules: could not resolve module "${module}". Are you sure the name of the module you are trying to transpile is correct?`
-        );
-      return resolved;
-    })
-    .map(path.dirname);
-  return resolvedModules;
+/**
+ * Logger for the debug mode
+ */
+const createLogger = (enable) => {
+  return (message, force) => {
+    if (enable || force) console.info(`next-transpile-modules - ${message}`);
+  };
 };
 
 /**
  * Transpile modules with Next.js Babel configuration
  * @param {string[]} modules
- * @param {{resolveSymlinks?: boolean; unstable_webpack5?: boolean}} options
+ * @param {{resolveSymlinks?: boolean; debug?: boolean, unstable_webpack5?: boolean}} options
  */
 const withTmInitializer = (modules = [], options = {}) => {
   const withTM = (nextConfig = {}) => {
@@ -87,13 +154,25 @@ const withTmInitializer = (modules = [], options = {}) => {
 
     const resolveSymlinks = options.resolveSymlinks || false;
     const isWebpack5 = options.unstable_webpack5 || false;
+    const resolveFromRoot = options.resolveFromRoot || false;
+    const debug = options.debug || false;
 
-    const resolvedModules = generateResolvedModules(modules);
+    const logger = createLogger(debug);
+
+    const modulesPaths = generateModulesPaths(modules);
+
+    if (isWebpack5) logger(`WARNING experimental Webpack 5 support enabled`, true);
+
+    logger(`the following paths will get transpiled:\n${modulesPaths.map((mod) => `  - ${mod}`).join('\n')}`);
 
     // Generate Webpack condition for the passed modules
     // https://webpack.js.org/configuration/module/#ruleinclude
-    const match = (path) => resolvedModules.some((modulePath) => path.includes(modulePath));
-    const unmatch = (path) => resolvedModules.every((modulePath) => !path.includes(modulePath));
+    const match = (path) =>
+      modulesPaths.some((modulePath) => {
+        const transpiled = path.includes(modulePath);
+        if (transpiled) logger(`transpiled: ${path}`);
+        return transpiled;
+      });
 
     return Object.assign({}, nextConfig, {
       webpack(config, options) {
@@ -110,23 +189,23 @@ const withTmInitializer = (modules = [], options = {}) => {
         // transpiled.
         config.resolve.symlinks = resolveSymlinks;
 
-        const hasInclude = (ctx, req) => {
-          const test = resolvedModules.some((mod) => {
+        const hasInclude = (context, request) => {
+          const test = modulesPaths.some((mod) => {
             // If we the code requires/import an absolute path
-            if (!req.startsWith('.')) {
+            if (!request.startsWith('.')) {
               try {
-                const resolved = resolve(__dirname, req);
+                const moduleDirectory = getPackageRootDirectory(request);
 
-                if (!resolved) return false;
+                if (!moduleDirectory) return false;
 
-                return resolved.includes(mod);
+                return moduleDirectory.includes(mod);
               } catch (err) {
                 return false;
               }
             }
 
             // Otherwise, for relative imports
-            return path.resolve(ctx, req).includes(mod);
+            return path.resolve(context, request).includes(mod);
           });
 
           return test;
@@ -143,8 +222,8 @@ const withTmInitializer = (modules = [], options = {}) => {
               };
             }
 
-            return (ctx, req, cb) => {
-              return hasInclude(ctx, req) ? cb() : external(ctx, req, cb);
+            return (context, request, cb) => {
+              return hasInclude(context, request) ? cb() : external(context, request, cb);
             };
           });
         }
@@ -154,13 +233,19 @@ const withTmInitializer = (modules = [], options = {}) => {
           config.module.rules.push({
             test: /\.+(js|jsx|mjs|ts|tsx)$/,
             use: options.defaultLoaders.babel,
-            include: match,
+            include: match
+          });
+
+          // IMPROVE ME: we are losing all the cache on node_modules, which is terrible
+          // The problem is managedPaths does not allow to isolate specific specific folders
+          config.snapshot = Object.assign(config.snapshot || {}, {
+            managedPaths: []
           });
         } else {
           config.module.rules.push({
             test: /\.+(js|jsx|mjs|ts|tsx)$/,
             loader: options.defaultLoaders.babel,
-            include: match,
+            include: match
           });
         }
 
@@ -180,18 +265,18 @@ const withTmInitializer = (modules = [], options = {}) => {
 
           if (nextCssLoader) {
             nextCssLoader.issuer.or = nextCssLoader.issuer.and ? nextCssLoader.issuer.and.concat(match) : match;
-            nextCssLoader.issuer.not = [unmatch];
+            delete nextCssLoader.issuer.not;
             delete nextCssLoader.issuer.and;
           } else {
-            console.warn('next-transpile-modules: could not find default CSS rule, CSS imports may not work');
+            console.warn('next-transpile-modules - could not find default CSS rule, CSS imports may not work');
           }
 
           if (nextSassLoader) {
             nextSassLoader.issuer.or = nextSassLoader.issuer.and ? nextSassLoader.issuer.and.concat(match) : match;
-            nextSassLoader.issuer.not = [unmatch];
+            delete nextSassLoader.issuer.not;
             delete nextSassLoader.issuer.and;
           } else {
-            console.warn('next-transpile-modules: could not find default SASS rule, SASS imports may not work');
+            console.warn('next-transpile-modules - could not find default SASS rule, SASS imports may not work');
           }
         }
 
@@ -200,32 +285,79 @@ const withTmInitializer = (modules = [], options = {}) => {
         // https://github.com/vercel/next.js/issues/13039
         config.watchOptions.ignored = [
           ...config.watchOptions.ignored.filter((pattern) => pattern !== '**/node_modules/**'),
-          `**node_modules/{${modules.map((mod) => `!(${mod})`).join(',')}}/**/*`,
+          `**node_modules/{${modules.map((mod) => `!(${mod})`).join(',')}}/**/*`
         ];
 
-        if (isWebpack5) {
-          const checkForTranspiledModules = (currentPath) =>
-            modules.find((mod) => {
-              return currentPath.includes(path.dirname(mod)) || currentPath.includes(mod);
-            });
-
-          const snapshot = Object.assign({}, config.snapshot);
-          const mainPkg = require(pkgUp.sync());
-          const simpleResolve = Object.keys({ ...mainPkg.dependencies, ...mainPkg.resolutions })
-            .map((key) => {
-              return pkgUp.sync({ cwd: resolve(__dirname, key) });
-            })
-            .filter((i) => {
-              return !checkForTranspiledModules(i);
-            });
-
-          config.snapshot = Object.assign(snapshot, {
-            managedPaths: simpleResolve,
+        if (isWebpack5 && options.dev) {
+          const transpiledModuleDeps = modulesPaths.map((modulePath) => {
+            return path.join(modulePath, 'node_modules');
           });
 
-          config.cache = {
-            type: 'filesystem',
-          };
+          const workingDirectory = resolveFromRoot ? path.dirname(findRootPackageJsonPath(CWD)) : CWD;
+          const globbedFiles = glob.sync('**/node_modules/', { cwd: workingDirectory, nosort: true, absolute: true });
+          let rootNodeModules = [];
+
+          if (fs.existsSync(path.join(workingDirectory, 'node_modules'))) {
+            rootNodeModules = glob.sync('*/package.json', {
+              cwd: path.join(workingDirectory, 'node_modules'),
+              nosort: true,
+              absolute: true
+            });
+          }
+          const managedPathsSet = new Set([...globbedFiles, ...rootNodeModules]);
+          const managedPaths = Array.from(managedPathsSet).filter((i) => {
+            return transpiledModuleDeps.some((transpiledPath) => {
+              return !transpiledPath.includes(i);
+            });
+          });
+          // HMR magic
+          // const checkForTranspiledModules = (currentPath) =>
+          //   modules.find((mod) => {
+          //     return symlinkedPackages.some((sym) => {
+          //       if (currentPath === pkgUp.sync({ cwd: sym })) {
+          //         return true;
+          //       }
+          //     });
+          //     // not used for right now
+          //     return currentPath.includes(path.dirname(mod)) || currentPath.includes(mod);
+          //   });
+
+          const snapshot = Object.assign({}, config.snapshot);
+          //
+          // const subPackages = resolvedModules.reduce((acc, module) => {
+          //   const pkg = require(path.join(pkgUp.sync({ cwd: module })));
+          //   let allPossibleModules = Object.keys({
+          //     ...pkg.dependencies,
+          //     ...pkg.peerDependencies,
+          //   });
+          //   allPossibleModules = Array.from(new Set([...allPossibleModules]));
+          //
+          //   allPossibleModules.forEach((key) => {
+          //     const resolveFrom = path.dirname(pkgUp.sync({ cwd: module }));
+          //     try {
+          //       acc.push(pkgUp.sync({ cwd: resolve(resolveFrom, key) }));
+          //     } catch (e) {
+          //       try {
+          //         console.log(pkgUp.sync({ cwd: path.dirname(resolve(resolveFrom, path.join(key,'package.json'))) }))
+          //       } catch (e) {
+          //         console.log('error resolving', key);
+          //       }
+          //     }
+          //   });
+          //
+          //   return acc;
+          // }, []);
+          //
+          // const cacheablePackages = Array.from(new Set([...mainPackages, ...subPackages])).filter((i) => {
+          //   return !checkForTranspiledModules(i);
+          // });
+          config.snapshot = Object.assign(snapshot, {
+            managedPaths: managedPaths
+          });
+          //
+          // config.cache = {
+          //   type: 'memory',
+          // };
         }
         // Overload the Webpack config if it was already overloaded
         if (typeof nextConfig.webpack === 'function') {
@@ -233,7 +365,7 @@ const withTmInitializer = (modules = [], options = {}) => {
         }
 
         return config;
-      },
+      }
     });
   };
 
