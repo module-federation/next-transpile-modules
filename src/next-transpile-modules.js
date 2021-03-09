@@ -65,7 +65,9 @@ const CWD = process.cwd();
 const resolve = enhancedResolve.create.sync({
   symlinks: false,
   extensions: ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.css', '.scss', '.sass'],
-  mainFields: ['main', 'source']
+  mainFields: ['main', 'module', 'source'],
+  // Is it right? https://github.com/webpack/enhanced-resolve/issues/283#issuecomment-775162497
+  conditionNames: ['require'],
 });
 
 /**
@@ -74,6 +76,7 @@ const resolve = enhancedResolve.create.sync({
  *
  * @param {RegExp} x
  * @param {RegExp} y
+ * @returns {boolean}
  */
 const regexEqual = (x, y) => {
   return (
@@ -89,6 +92,7 @@ const regexEqual = (x, y) => {
 /**
  * Return the root path (package.json directory) of a given module
  * @param {string} module
+ * @returns {string}
  */
 const getPackageRootDirectory = (module) => {
   let packageDirectory;
@@ -127,6 +131,7 @@ const getPackageRootDirectory = (module) => {
 /**
  * Resolve modules to their real paths
  * @param {string[]} modules
+ * @returns {string[]}
  */
 const generateModulesPaths = (modules) => {
   const packagesPaths = modules.map(getPackageRootDirectory);
@@ -136,6 +141,8 @@ const generateModulesPaths = (modules) => {
 
 /**
  * Logger for the debug mode
+ * @param {boolean} enable enable the logger or not
+ * @returns {(message: string, force: boolean) => void}
  */
 const createLogger = (enable) => {
   return (message, force) => {
@@ -144,16 +151,38 @@ const createLogger = (enable) => {
 };
 
 /**
+ * Matcher function for webpack to decide which modules to transpile
+ * @param {string[]} modulesToTranspile
+ * @param {function} logger
+ * @returns {(path: string) => boolean}
+ */
+const createWebpackMatcher = (modulesToTranspile, logger = createLogger(false)) => {
+  return (filePath) => {
+    const isNestedNodeModules = (filePath.match(/node_modules/g) || []).length > 1;
+
+    if (isNestedNodeModules) {
+      return false;
+    }
+
+    return modulesToTranspile.some((modulePath) => {
+      const transpiled = filePath.startsWith(modulePath);
+      if (transpiled) logger(`transpiled: ${filePath}`);
+      return transpiled;
+    });
+  };
+};
+
+/**
  * Transpile modules with Next.js Babel configuration
  * @param {string[]} modules
- * @param {{resolveSymlinks?: boolean; debug?: boolean, unstable_webpack5?: boolean}} options
+ * @param {{resolveSymlinks?: boolean, debug?: boolean, __unstable_matcher: (path: string) => boolean}} options
  */
 const withTmInitializer = (modules = [], options = {}) => {
   const withTM = (nextConfig = {}) => {
     if (modules.length === 0) return nextConfig;
 
     const resolveSymlinks = options.resolveSymlinks || false;
-    const isWebpack5 = options.unstable_webpack5 || false;
+    const isWebpack5 = (nextConfig.future && nextConfig.future.webpack5) || false;
     const resolveFromRoot = options.resolveFromRoot || false;
     const debug = options.debug || false;
 
@@ -167,12 +196,7 @@ const withTmInitializer = (modules = [], options = {}) => {
 
     // Generate Webpack condition for the passed modules
     // https://webpack.js.org/configuration/module/#ruleinclude
-    const match = (path) =>
-      modulesPaths.some((modulePath) => {
-        const transpiled = path.includes(modulePath);
-        if (transpiled) logger(`transpiled: ${path}`);
-        return transpiled;
-      });
+    const matcher = options.__unstable_matcher || createWebpackMatcher(modulesPaths, logger);
 
     return Object.assign({}, nextConfig, {
       webpack(config, options) {
@@ -217,8 +241,9 @@ const withTmInitializer = (modules = [], options = {}) => {
             if (typeof external !== 'function') return external;
 
             if (isWebpack5) {
-              return ({ context, request }, cb) => {
-                return hasInclude(context, request) ? cb() : external({ context, request }, cb);
+              return async ({ context, request, getResolve }) => {
+                if (hasInclude(context, request)) return;
+                return external({ context, request, getResolve });
               };
             }
 
@@ -233,19 +258,19 @@ const withTmInitializer = (modules = [], options = {}) => {
           config.module.rules.push({
             test: /\.+(js|jsx|mjs|ts|tsx)$/,
             use: options.defaultLoaders.babel,
-            include: match
+            include: matcher,
           });
 
           // IMPROVE ME: we are losing all the cache on node_modules, which is terrible
           // The problem is managedPaths does not allow to isolate specific specific folders
           config.snapshot = Object.assign(config.snapshot || {}, {
-            managedPaths: []
+            managedPaths: [],
           });
         } else {
           config.module.rules.push({
             test: /\.+(js|jsx|mjs|ts|tsx)$/,
             loader: options.defaultLoaders.babel,
-            include: match
+            include: matcher,
           });
         }
 
@@ -264,7 +289,7 @@ const withTmInitializer = (modules = [], options = {}) => {
           );
 
           if (nextCssLoader) {
-            nextCssLoader.issuer.or = nextCssLoader.issuer.and ? nextCssLoader.issuer.and.concat(match) : match;
+            nextCssLoader.issuer.or = nextCssLoader.issuer.and ? nextCssLoader.issuer.and.concat(matcher) : matcher;
             delete nextCssLoader.issuer.not;
             delete nextCssLoader.issuer.and;
           } else {
@@ -272,7 +297,7 @@ const withTmInitializer = (modules = [], options = {}) => {
           }
 
           if (nextSassLoader) {
-            nextSassLoader.issuer.or = nextSassLoader.issuer.and ? nextSassLoader.issuer.and.concat(match) : match;
+            nextSassLoader.issuer.or = nextSassLoader.issuer.and ? nextSassLoader.issuer.and.concat(matcher) : matcher;
             delete nextSassLoader.issuer.not;
             delete nextSassLoader.issuer.and;
           } else {
@@ -285,7 +310,7 @@ const withTmInitializer = (modules = [], options = {}) => {
         // https://github.com/vercel/next.js/issues/13039
         config.watchOptions.ignored = [
           ...config.watchOptions.ignored.filter((pattern) => pattern !== '**/node_modules/**'),
-          `**node_modules/{${modules.map((mod) => `!(${mod})`).join(',')}}/**/*`
+          `**node_modules/{${modules.map((mod) => `!(${mod})`).join(',')}}/**/*`,
         ];
 
         if (isWebpack5 && options.dev) {
@@ -365,7 +390,7 @@ const withTmInitializer = (modules = [], options = {}) => {
         }
 
         return config;
-      }
+      },
     });
   };
 
