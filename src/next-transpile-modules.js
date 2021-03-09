@@ -326,7 +326,7 @@ const withTmInitializer = (modules = [], options = {}) => {
             rootNodeModules = glob.sync('*/package.json', {
               cwd: path.join(workingDirectory, 'node_modules'),
               nosort: true,
-              absolute: true
+              absolute: true,
             });
           }
           const managedPathsSet = new Set([...globbedFiles, ...rootNodeModules]);
@@ -377,7 +377,7 @@ const withTmInitializer = (modules = [], options = {}) => {
           //   return !checkForTranspiledModules(i);
           // });
           config.snapshot = Object.assign(snapshot, {
-            managedPaths: managedPaths
+            managedPaths: managedPaths,
           });
           //
           // config.cache = {
