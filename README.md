@@ -1,7 +1,7 @@
 # Next.js + Transpile `node_modules`
 
-![Build Status](https://github.com/martpie/next-transpile-modules/workflows/tests/badge.svg)
-![Dependencies](https://img.shields.io/david/martpie/next-transpile-modules)
+![Build Status](https://github.com/martpie/@module-federation/next-transpile-modules/workflows/tests/badge.svg)
+![Dependencies](https://img.shields.io/david/martpie/@module-federation/next-transpile-modules)
 
 Transpile modules from `node_modules` using the Next.js Babel configuration.
 
@@ -36,13 +36,13 @@ Latest Next.js version tested: **10.0.8**.
 ## Installation
 
 ```
-npm install --save next-transpile-modules
+npm install --save @module-federation/next-transpile-modules
 ```
 
 or
 
 ```
-yarn add next-transpile-modules
+yarn add @module-federation/next-transpile-modules
 ```
 
 ## Usage
@@ -57,20 +57,20 @@ yarn add next-transpile-modules
 
 #### Note on Webpack 5 support
 
-Since `6.2.0` (with `next@10.0.6`), Webpack 5 support is automatically enabled via the `future.webpack5` flag, but is experimental and may break in any patch or minor release (from both `next` or `next-transpile-modules`) without any warning, be careful!
+Since `6.2.0` (with `next@10.0.6`), Webpack 5 support is automatically enabled via the `future.webpack5` flag, but is experimental and may break in any patch or minor release (from both `next` or `@module-federation/next-transpile-modules`) without any warning, be careful!
 
 #### Examples
 
 ```js
 // next.config.js
-const withTM = require('next-transpile-modules')(['somemodule', 'and-another']); // pass the modules you would like to see transpiled
+const withTM = require('@module-federation/next-transpile-modules')(['somemodule', 'and-another']); // pass the modules you would like to see transpiled
 
 module.exports = withTM();
 ```
 
 ```js
 // next.config.js
-const withTM = require('next-transpile-modules')(['somemodule', 'and-another']);
+const withTM = require('@module-federation/next-transpile-modules')(['somemodule', 'and-another']);
 
 module.exports = withTM({
   future: {
@@ -90,13 +90,13 @@ module.exports = withTM({
 You can include scoped packages or nested ones:
 
 ```js
-const withTM = require('next-transpile-modules')(['@shared/ui', '@shared/utils']);
+const withTM = require('@module-federation/next-transpile-modules')(['@shared/ui', '@shared/utils']);
 
 // ...
 ```
 
 ```js
-const withTM = require('next-transpile-modules')(['styleguide/node_modules/lodash-es']);
+const withTM = require('@module-federation/next-transpile-modules')(['styleguide/node_modules/lodash-es']);
 
 // ...
 ```
@@ -105,7 +105,7 @@ const withTM = require('next-transpile-modules')(['styleguide/node_modules/lodas
 
 ```js
 const withPlugins = require('next-compose-plugins');
-const withTM = require('next-transpile-modules')(['some-module', 'and-another']);
+const withTM = require('@module-federation/next-transpile-modules')(['some-module', 'and-another']);
 
 module.exports = withPlugins([withTM], {
   // ...
@@ -114,7 +114,7 @@ module.exports = withPlugins([withTM], {
 
 ### CSS/SCSS support
 
-Since `next-transpile-modules@3` and `next@>9.2`, this plugin can also transpile CSS included in your transpiled packages. SCSS/SASS is also supported since `next-transpile-modules@3.1.0`.
+Since `@module-federation/next-transpile-modules@3` and `next@>9.2`, this plugin can also transpile CSS included in your transpiled packages. SCSS/SASS is also supported since `@module-federation/next-transpile-modules@3.1.0`.
 
 In your transpiled package:
 
@@ -145,7 +145,7 @@ In your app:
 
 ```js
 // next.config.js
-const withTM = require('next-transpile-modules')(['shared-ui']);
+const withTM = require('@module-federation/next-transpile-modules')(['shared-ui']);
 
 // ...
 ```
@@ -189,7 +189,7 @@ export default function MyApp({ Component, pageProps }) {
 
 ### A new version of Next.js is available/I just setup my project, and my build is breaking because of this plugin
 
-It is important to understand that this plugin is a big hack of the Next.js Webpack configuration. When the Next.js team pushes an update to their build configuration, the changes `next-transpile-modules` bring may be outdated, and the plugin needs to be updated (which is a breaking change for this plugin, as the updated plugin is usually not retro-compatible with the previous versions of Next.js).
+It is important to understand that this plugin is a big hack of the Next.js Webpack configuration. When the Next.js team pushes an update to their build configuration, the changes `@module-federation/next-transpile-modules` bring may be outdated, and the plugin needs to be updated (which is a breaking change for this plugin, as the updated plugin is usually not retro-compatible with the previous versions of Next.js).
 
 Now, this build problem can happen when you install your dependencies with `npm install`/`yarn install` (in your CI pipeline for example). Those commands **may re-resolve your `next` dependency of your `package.json` to a newer one**, and this newer one may have critical Webpack changes, hence breaking your build.
 
@@ -204,7 +204,7 @@ more:
 
 ### I have trouble making it work after upgrading to v5/v6
 
-Please make sure to [read the changelog](https://github.com/martpie/next-transpile-modules/releases).
+Please make sure to [read the changelog](https://github.com/martpie/@module-federation/next-transpile-modules/releases).
 
 ### I have trouble with transpilation and my custom `.babelrc`
 
@@ -233,14 +233,14 @@ Lerna's purpose is to publish different packages from a monorepo, **it does not 
 
 This is not coming from me, but [from Lerna's maintainer](https://github.com/lerna/lerna/issues/1243#issuecomment-401396850).
 
-So you are probably [using it wrong](https://github.com/martpie/next-transpile-modules/issues/5#issuecomment-441501107), and I advice you to use `npm` or Yarn workspaces instead.
+So you are probably [using it wrong](https://github.com/martpie/@module-federation/next-transpile-modules/issues/5#issuecomment-441501107), and I advice you to use `npm` or Yarn workspaces instead.
 
 ### But... I really need to make it work with Lerna!
 
 Again, most probably a bad idea. You may need to tell your Webpack configuration how to properly resolve your scoped packages, as they won't be installed in your Next.js directory, but the root of your Lerna setup.
 
 ```js
-const withTM = require('next-transpile-modules')(['@your-project/shared', '@your-project/styleguide']);
+const withTM = require('@module-federation/next-transpile-modules')(['@your-project/shared', '@your-project/styleguide']);
 
 module.exports = withTM({
   webpack: (config, options) => {
@@ -258,7 +258,7 @@ module.exports = withTM({
 
 ### I have trouble with duplicated dependencies or the `Invalid hook call` error in `react`
 
-It can happen that when using `next-transpile-modules` with a local package and `npm`, you end up with duplicated dependencies in your final Next.js build. It is important to understand _why_ it happens.
+It can happen that when using `@module-federation/next-transpile-modules` with a local package and `npm`, you end up with duplicated dependencies in your final Next.js build. It is important to understand _why_ it happens.
 
 Let's take the following setup: one Next.js app ("Consumer"), and one Styleguide library.
 
@@ -269,7 +269,7 @@ The thing is in this shared package, you also have a `node_modules`. So when you
 You can tell Webpack how to resolve the `react` of your Styleguide to use the version in your Next.js app like that:
 
 ```diff
-const withTM = require('next-transpile-modules')(['styleguide']);
+const withTM = require('@module-federation/next-transpile-modules')(['styleguide']);
 
 module.exports = withTM({
   webpack: (config, options) => {
