@@ -183,9 +183,8 @@ const withTmInitializer = (modules = [], options = {}) => {
 
     const resolveSymlinks = options.resolveSymlinks || false;
     const isWebpack5 = (nextConfig.future && nextConfig.future.webpack5) || false;
-    const resolveFromRoot = options.resolveFromRoot || false;
     const debug = options.debug || false;
-
+    const resolveFromRoot = options.resolveFromRoot || false;
     const logger = createLogger(debug);
 
     const modulesPaths = generateModulesPaths(modules);
