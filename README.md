@@ -2,8 +2,6 @@
 
 ![Build Status](https://github.com/martpie/next-transpile-modules/workflows/tests/badge.svg)
 ![Dependencies](https://img.shields.io/david/martpie/next-transpile-modules)
-[![sponsor: Creative Tim](https://img.shields.io/badge/sponsor-Creative%20Tim-blue)](https://creative-tim.com/?affiliate_id=140482)
-
 
 Transpile modules from `node_modules` using the Next.js Babel configuration.
 
@@ -33,7 +31,7 @@ What this plugin **does not aim** to solve:
 | Next.js 8 / 9     | 2.x            |
 | Next.js 6 / 7     | 1.x            |
 
-Latest version tested: **10.0.0**.
+Latest Next.js version tested: **10.0.8**.
 
 ## Installation
 
@@ -55,12 +53,13 @@ yarn add next-transpile-modules
 - `options` Object (optional)
   - `resolveSymlinks` Boolean: Enable symlinks resolution to their real path by Webpack (most of the time, you won't want that) (default to `false`)
   - `debug` Boolean: Display some informative logs in the console (can get noisy!) (default to `false`)
-  - `unstable_webpack5` Boolean: Enable [Next.js Webpack 5 support](https://nextjs.org/blog/next-9-5#webpack-5-support-beta) (experimental) (default to `false`)
-  - `resolveFromRoot` Boolean: if CWD is not the root (like in a monorepo) and you want to resolve from the root monorepo
+  - `__unstable_matcher` (path) => boolean: Custom matcher that will override the default one. Don't use it.
 
-**note:** unstable features may break in any patch or minor release without any warning, be careful!
+#### Note on Webpack 5 support
 
-Example:
+Since `6.2.0` (with `next@10.0.6`), Webpack 5 support is automatically enabled via the `future.webpack5` flag, but is experimental and may break in any patch or minor release (from both `next` or `next-transpile-modules`) without any warning, be careful!
+
+#### Examples
 
 ```js
 // next.config.js
@@ -71,9 +70,13 @@ module.exports = withTM();
 
 ```js
 // next.config.js
-const withTM = require('next-transpile-modules')(['somemodule', 'and-another'], { unstable_webpack5: true });
+const withTM = require('next-transpile-modules')(['somemodule', 'and-another']);
 
-module.exports = withTM();
+module.exports = withTM({
+  future: {
+    webpack5: true,
+  },
+});
 ```
 
 **Notes:**
@@ -93,7 +96,7 @@ const withTM = require('next-transpile-modules')(['@shared/ui', '@shared/utils']
 ```
 
 ```js
-const withTM = require('next-transpile-modules')(['styleguide/components']);
+const withTM = require('next-transpile-modules')(['styleguide/node_modules/lodash-es']);
 
 // ...
 ```
@@ -215,6 +218,15 @@ If you add a local library (let's say with `yarn add ../some-shared-module`), Ya
 
 You can go back to `npm`, or use Yarn workspaces. See [an example](https://github.com/zeit/next.js/tree/canary/examples/with-yarn-workspaces) in the official Next.js repo.
 
+### How do I find out which package is causing a runtime exception?
+
+- add `config.optimization.minimize = false;` to you `next.config.js`'s Webpack configuration
+- run a production build
+- run it on the browser throwing the error
+- open the console, jump to the line where it failed
+- goes a little bit up in the lines of code, and check the Webpack comments telling you which module is affected
+
+
 ### I have trouble making it work with Lerna
 
 Lerna's purpose is to publish different packages from a monorepo, **it does not help for and does not intend to help local development with local modules** (<- this, **IN CAPS**).
@@ -260,7 +272,11 @@ You can tell Webpack how to resolve the `react` of your Styleguide to use the ve
 const withTM = require('next-transpile-modules')(['styleguide']);
 
 module.exports = withTM({
-  webpack: (config) => {
+  webpack: (config, options) => {
++   if (options.isServer) {
++     config.externals = ['react', ...config.externals];
++   }
++
 +   config.resolve.alias['react'] = path.resolve(__dirname, '.', 'node_modules', 'react');
 
     return config
@@ -271,11 +287,3 @@ module.exports = withTM({
 Please note, the above [will only work](https://github.com/zeit/next.js/issues/9022#issuecomment-610255555) if `react` is properly declared as `peerDependencies` or `devDependencies` in your referenced package.
 
 It is not a great solution, but it works. Any help to find a more future-proof solution is welcome.
-
-## Credits
-
-All the honor goes to [James Gorrie](https://github.com/jamesgorrie) who created the first version of this plugin.
-
-## Credits
-
-All the honor goes to [James Gorrie](https://github.com/jamesgorrie) who created the first version of this plugin.
