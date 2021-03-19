@@ -52,9 +52,25 @@ yarn add next-transpile-modules
 
 - `transpileModules` String[]: modules to be transpiled
 - `options` Object (optional)
-  - `resolveSymlinks` Boolean: Enable symlinks resolution to their real path by Webpack (most of the time, you won't want that) (default to `false`)
+  - `resolveSymlinks` Boolean: Enable symlinks resolution to their real path by Webpack (default to `false`)
   - `debug` Boolean: Display some informative logs in the console (can get noisy!) (default to `false`)
   - `__unstable_matcher` (path) => boolean: Custom matcher that will override the default one. Don't use it.
+
+#### Note on `resolveSymlinks`
+
+Node.js resolution is based on the fact that symlinks are resolved. Not resolving them will alter the behavior, but there are some cases where the alternative behavior makes things a lot easier:
+
+- You are using `npm/yarn link` to link packages into node_modules.
+- You are using `npm` with `file:` dependencies that live outside of your project directory
+  - `npm` will create symlinks in this case. Yarn will copy instead.
+
+If this **doesn't** apply to your use case **you should set `resolveSymlinks: true`**, which results in the original behavior and **better performance**.
+
+The following thing will use symlinks, but work great with `resolveSymlinks: true`:
+
+- `pnpm`
+- `yarn` workspaces
+- `yarn 2` portals
 
 #### Note on Webpack 5 support
 
@@ -226,7 +242,6 @@ You can go back to `npm`, or use Yarn workspaces. See [an example](https://githu
 - run it on the browser throwing the error
 - open the console, jump to the line where it failed
 - goes a little bit up in the lines of code, and check the Webpack comments telling you which module is affected
-
 
 ### I have trouble making it work with Lerna
 
