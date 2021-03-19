@@ -202,9 +202,9 @@ const withTmInitializer = (modules = [], options = {}) => {
             if (typeof external !== 'function') return external;
 
             if (isWebpack5) {
-              return async ({ context, request, getResolve }) => {
-                if (hasInclude(context, request)) return;
-                return external({ context, request, getResolve });
+              return async (options) => {
+                if (hasInclude(options.context, options.request)) return;
+                return external(options);
               };
             }
 
