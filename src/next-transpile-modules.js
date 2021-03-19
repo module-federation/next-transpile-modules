@@ -21,18 +21,6 @@ const escalade = require('escalade/sync');
 const CWD = process.cwd();
 
 /**
- * Our own Node.js resolver that can ignore symlinks resolution and  can support
- * PnP
- */
-const resolve = enhancedResolve.create.sync({
-  symlinks: false,
-  extensions: ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.css', '.scss', '.sass'],
-  mainFields: ['main', 'module', 'source'],
-  // Is it right? https://github.com/webpack/enhanced-resolve/issues/283#issuecomment-775162497
-  conditionNames: ['require'],
-});
-
-/**
  * Check if two regexes are equal
  * Stolen from https://stackoverflow.com/questions/10776600/testing-for-equality-of-regular-expressions
  *
@@ -49,56 +37,6 @@ const regexEqual = (x, y) => {
     x.ignoreCase === y.ignoreCase &&
     x.multiline === y.multiline
   );
-};
-
-/**
- * Return the root path (package.json directory) of a given module
- * @param {string} module
- * @returns {string}
- */
-const getPackageRootDirectory = (module) => {
-  let packageDirectory;
-  let packageRootDirectory;
-
-  try {
-    // Get the module path
-    packageDirectory = resolve(CWD, module);
-
-    if (!packageDirectory) {
-      throw new Error(
-        `next-transpile-modules - could not resolve module "${module}". Are you sure the name of the module you are trying to transpile is correct?`
-      );
-    }
-
-    // Get the location of its package.json
-    const pkgPath = escalade(packageDirectory, (dir, names) => {
-      if (names.includes('package.json')) {
-        return 'package.json';
-      }
-      return false;
-    });
-    if (pkgPath == null) {
-      throw new Error(
-        `next-transpile-modules - an error happened when trying to get the root directory of "${module}". Is it missing a package.json?\n${err}`
-      );
-    }
-    packageRootDirectory = path.dirname(pkgPath);
-  } catch (err) {
-    throw new Error(`next-transpile-modules - an unexpected error happened when trying to resolve "${module}"\n${err}`);
-  }
-
-  return packageRootDirectory;
-};
-
-/**
- * Resolve modules to their real paths
- * @param {string[]} modules
- * @returns {string[]}
- */
-const generateModulesPaths = (modules) => {
-  const packagesPaths = modules.map(getPackageRootDirectory);
-
-  return packagesPaths;
 };
 
 /**
@@ -149,7 +87,61 @@ const withTmInitializer = (modules = [], options = {}) => {
 
     const logger = createLogger(debug);
 
-    const modulesPaths = generateModulesPaths(modules);
+    /**
+     * Our own Node.js resolver that can ignore symlinks resolution and  can support
+     * PnP
+     */
+    const resolve = enhancedResolve.create.sync({
+      symlinks: resolveSymlinks,
+      extensions: ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.css', '.scss', '.sass'],
+      mainFields: ['main', 'module', 'source'],
+      // Is it right? https://github.com/webpack/enhanced-resolve/issues/283#issuecomment-775162497
+      conditionNames: ['require'],
+    });
+
+    /**
+     * Return the root path (package.json directory) of a given module
+     * @param {string} module
+     * @returns {string}
+     */
+    const getPackageRootDirectory = (module) => {
+      let packageDirectory;
+      let packageRootDirectory;
+
+      try {
+        // Get the module path
+        packageDirectory = resolve(CWD, module);
+
+        if (!packageDirectory) {
+          throw new Error(
+            `next-transpile-modules - could not resolve module "${module}". Are you sure the name of the module you are trying to transpile is correct?`
+          );
+        }
+
+        // Get the location of its package.json
+        const pkgPath = escalade(packageDirectory, (dir, names) => {
+          if (names.includes('package.json')) {
+            return 'package.json';
+          }
+          return false;
+        });
+        if (pkgPath == null) {
+          throw new Error(
+            `next-transpile-modules - an error happened when trying to get the root directory of "${module}". Is it missing a package.json?\n${err}`
+          );
+        }
+        packageRootDirectory = path.dirname(pkgPath);
+      } catch (err) {
+        throw new Error(
+          `next-transpile-modules - an unexpected error happened when trying to resolve "${module}"\n${err}`
+        );
+      }
+
+      return packageRootDirectory;
+    };
+
+    // Resolve modules to their real paths
+    const modulesPaths = modules.map(getPackageRootDirectory);
 
     if (isWebpack5) logger(`WARNING experimental Webpack 5 support enabled`, true);
 
@@ -168,11 +160,13 @@ const withTmInitializer = (modules = [], options = {}) => {
           );
         }
 
-        // Avoid Webpack to resolve transpiled modules path to their real path as
-        // we want to test modules from node_modules only. If it was enabled,
-        // modules in node_modules installed via symlink would then not be
-        // transpiled.
-        config.resolve.symlinks = resolveSymlinks;
+        if (resolveSymlinks !== undefined) {
+          // Avoid Webpack to resolve transpiled modules path to their real path as
+          // we want to test modules from node_modules only. If it was enabled,
+          // modules in node_modules installed via symlink would then not be
+          // transpiled.
+          config.resolve.symlinks = resolveSymlinks;
+        }
 
         const hasInclude = (context, request) => {
           let absolutePath;
