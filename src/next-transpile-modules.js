@@ -175,25 +175,25 @@ const withTmInitializer = (modules = [], options = {}) => {
         config.resolve.symlinks = resolveSymlinks;
 
         const hasInclude = (context, request) => {
-          const test = modulesPaths.some((mod) => {
-            // If we the code requires/import an absolute path
-            if (!request.startsWith('.')) {
-              try {
-                const moduleDirectory = getPackageRootDirectory(request);
+          let absolutePath;
+          // If we the code requires/import an absolute path
+          if (!request.startsWith('.')) {
+            try {
+              const moduleDirectory = getPackageRootDirectory(request);
 
-                if (!moduleDirectory) return false;
+              if (!moduleDirectory) return false;
 
-                return moduleDirectory.includes(mod);
-              } catch (err) {
-                return false;
-              }
+              absolutePath = moduleDirectory;
+            } catch (err) {
+              return false;
             }
-
+          } else {
             // Otherwise, for relative imports
-            return path.resolve(context, request).includes(mod);
+            absolutePath = path.resolve(context, request);
+          }
+          return modulesPaths.some((mod) => {
+            return absolutePath.startsWith(mod);
           });
-
-          return test;
         };
 
         // Since Next.js 8.1.0, config.externals is undefined
