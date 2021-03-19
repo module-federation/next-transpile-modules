@@ -1,9 +1,15 @@
 __apps__/yarn-workspaces/_shared
 __apps__/yarn-workspaces/_shared-ts
 __apps__/yarn-workspaces/_shared-ui
+__apps__/yarn-workspaces-symlinks/_shared
+__apps__/yarn-workspaces-symlinks/_shared-ts
+__apps__/yarn-workspaces-symlinks/_shared-ui
 __apps__/webpack-5/_shared
 __apps__/webpack-5/_shared-ts
 __apps__/webpack-5/_shared-ui
+__apps__/webpack-5-symlinks/_shared
+__apps__/webpack-5-symlinks/_shared-ts
+__apps__/webpack-5-symlinks/_shared-ui
 __apps__/_shared
 __apps__/_shared-ts
 __apps__/_shared-ui
@@ -20,11 +26,23 @@ __apps__/webpack-5/app/pages
 !__apps__/webpack-5/app/pages/.keep
 __apps__/webpack-5/app/next-transpile-modules.js
 
+__apps__/webpack-5-symlinks/app/components
+!__apps__/webpack-5-symlinks/app/components/.keep
+__apps__/webpack-5-symlinks/app/pages
+!__apps__/webpack-5-symlinks/app/pages/.keep
+__apps__/webpack-5-symlinks/app/next-transpile-modules.js
+
 __apps__/yarn-workspaces/app/components
 !__apps__/yarn-workspaces/app/components/.keep
 __apps__/yarn-workspaces/app/pages
 !__apps__/yarn-workspaces/app/pages/.keep
 __apps__/yarn-workspaces/app/next-transpile-modules.js
+
+__apps__/yarn-workspaces-symlinks/app/components
+!__apps__/yarn-workspaces-symlinks/app/components/.keep
+__apps__/yarn-workspaces-symlinks/app/pages
+!__apps__/yarn-workspaces-symlinks/app/pages/.keep
+__apps__/yarn-workspaces-symlinks/app/next-transpile-modules.js
 
 __apps__/pnpm/styles
 !__apps__/pnpm/styles/.keep
