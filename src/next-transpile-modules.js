@@ -231,11 +231,13 @@ const withTmInitializer = (modules = [], options = {}) => {
             include: matcher,
           });
 
-          // IMPROVE ME: we are losing all the cache on node_modules, which is terrible
-          // The problem is managedPaths does not allow to isolate specific specific folders
-          config.snapshot = Object.assign(config.snapshot || {}, {
-            managedPaths: [],
-          });
+          if (resolveSymlinks === false) {
+            // IMPROVE ME: we are losing all the cache on node_modules, which is terrible
+            // The problem is managedPaths does not allow to isolate specific specific folders
+            config.snapshot = Object.assign(config.snapshot || {}, {
+              managedPaths: [],
+            });
+          }
         } else {
           config.module.rules.push({
             test: /\.+(js|jsx|mjs|ts|tsx)$/,
