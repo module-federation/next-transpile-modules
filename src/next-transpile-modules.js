@@ -1,7 +1,7 @@
 /**
  * disclaimer:
  *
- * THIS PLUGIN IS A F*CKING BIG HACK.
+ * THIS PLUGIN IS A BIG HACK.
  *
  * don't even try to reason about the quality of the following lines of code.
  */
