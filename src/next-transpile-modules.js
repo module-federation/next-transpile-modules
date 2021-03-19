@@ -81,6 +81,7 @@ const withTmInitializer = (modules = [], options = {}) => {
   const withTM = (nextConfig = {}) => {
     if (modules.length === 0) return nextConfig;
 
+    // IMPROVE ME: false should not be the default for this option
     const resolveSymlinks = options.resolveSymlinks || false;
     const isWebpack5 = (nextConfig.future && nextConfig.future.webpack5) || false;
     const debug = options.debug || false;
