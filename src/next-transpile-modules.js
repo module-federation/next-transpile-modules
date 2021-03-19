@@ -203,7 +203,11 @@ const withTmInitializer = (modules = [], options = {}) => {
 
             if (isWebpack5) {
               return async (options) => {
-                if (hasInclude(options.context, options.request)) return;
+                try {
+                  const resolve = options.getResolve();
+                  const resolved = await resolve(options.context, options.request);
+                  if (modulesPaths.some((mod) => resolved.startsWith(mod))) return;
+                } catch (e) {}
                 return external(options);
               };
             }
