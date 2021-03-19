@@ -18,27 +18,27 @@ module.exports = {
       port: 3500,
     },
     {
-      command: `yarn --cwd ${yarnWorkspacesAppPath} run start -- --port 3501`,
+      command: `yarn --cwd ${yarnWorkspacesAppPath} run start --port 3501`,
       launchTimeout: 20000,
       port: 3501,
     },
     {
-      command: `yarn --cwd ${yarnWorkspacesSymlinksAppPath} run start -- --port 3502`,
+      command: `yarn --cwd ${yarnWorkspacesSymlinksAppPath} run start --port 3502`,
       launchTimeout: 20000,
       port: 3502,
     },
     {
-      command: `yarn --cwd ${webpack5AppPath} run start -- --port 3503`,
+      command: `yarn --cwd ${webpack5AppPath} run start --port 3503`,
       launchTimeout: 20000,
       port: 3503,
     },
     {
-      command: `yarn --cwd ${webpack5SymlinksAppPath} run start -- --port 3504`,
+      command: `yarn --cwd ${webpack5SymlinksAppPath} run start --port 3504`,
       launchTimeout: 20000,
       port: 3504,
     },
     {
-      command: `yarn --cwd ${pnpmAppPath} run start -- --port 3505`,
+      command: `yarn --cwd ${pnpmAppPath} run start --port 3505`,
       launchTimeout: 20000,
       port: 3505,
     },
