@@ -1,8 +1,8 @@
 {
-  "name": "next-transpile-modules",
+  "name": "@module-federation/next-transpile-modules",
   "version": "6.3.0",
   "license": "MIT",
-  "author": "Pierre de la Martinière <pierre.de.la.martiniere@gmail.com>",
+  "author": "Zack Jackson",
   "description": "Next.js plugin to transpile code from node_modules (supports TypeScript)",
   "main": "src/next-transpile-modules.js",
   "files": [
