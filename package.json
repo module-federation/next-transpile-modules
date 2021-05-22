@@ -31,12 +31,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/martpie/next-transpile-modules.git"
+    "url": "git+https://github.com/module-federation/next-transpile-modules.git"
   },
   "bugs": {
-    "url": "https://github.com/martpie/next-transpile-modules/issues"
+    "url": "https://github.com/module-federation/next-transpile-modules/issues"
   },
-  "homepage": "https://github.com/martpie/next-transpile-modules#readme",
+  "homepage": "https://github.com/module-federation/next-transpile-modules#readme",
   "keywords": [
     "next",
     "next.js",
