@@ -1,0 +1,9 @@
+{
+  "private": true,
+  "workspaces": [
+    "_shared",
+    "_shared-ts",
+    "_shared-ui",
+    "app"
+  ]
+}

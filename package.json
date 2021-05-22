@@ -1,16 +1,21 @@
 {
   "name": "@module-federation/next-transpile-modules",
-  "version": "6.4.0",
+  "version": "7.2.1",
   "license": "MIT",
   "author": "Zack Jackson",
   "description": "Next.js plugin to transpile code from node_modules (supports TypeScript)",
   "main": "src/next-transpile-modules.js",
   "files": [
-    "src/next-transpile-modules.js"
+    "src/next-transpile-modules.js",
+    "src/next-transpile-modules.d.ts"
   ],
   "scripts": {
-    "pretest": "node --trace-uncaught src/__tests__/setup.js",
-    "quickie": "node --trace-uncaught src/__tests__/setup.js && npm run dev --prefix src/__tests__/__apps__/npm-basic",
+    "setup": "node --trace-uncaught src/__tests__/setup.js",
+    "update:next": "npm run setup && bash scripts/next-update.sh",
+    "typings": "tsc",
+    "prepublishOnly": "npm run typings",
+    "pretest": "npm run setup",
+    "quickie": "node --trace-uncaught src/__tests__/setup.js && yarn --cwd src/__tests__/__apps__/yarn-workspaces/app run dev",
     "test": "jest --forceExit",
     "test:debug": "jest --detectOpenHandles --forceExit",
     "test:lint": "eslint .",
@@ -19,19 +24,19 @@
     "test:prepare:npm-basic": "npm run build --prefix=src/__tests__/__apps__/npm-basic",
     "test:prepare:yarn-workspaces": "yarn --cwd src/__tests__/__apps__/yarn-workspaces/app run build",
     "test:prepare:yarn-workspaces-symlinks": "yarn --cwd src/__tests__/__apps__/yarn-workspaces-symlinks/app run build",
-    "test:prepare:webpack-5": "yarn --cwd src/__tests__/__apps__/webpack-5/app run build",
-    "test:prepare:webpack-5-symlinks": "yarn --cwd src/__tests__/__apps__/webpack-5-symlinks/app run build",
+    "test:prepare:webpack-4": "yarn --cwd src/__tests__/__apps__/webpack-4/app run build",
+    "test:prepare:webpack-4-symlinks": "yarn --cwd src/__tests__/__apps__/webpack-4-symlinks/app run build",
     "test:prepare:pnpm": "npm run build --prefix=src/__tests__/__apps__/pnpm",
-    "test:prepare": "npm run test:prepare:npm-basic && npm run test:prepare:yarn-workspaces && npm run test:prepare:yarn-workspaces-symlinks && npm run test:prepare:webpack-5 && npm run test:prepare:webpack-5-symlinks && npm run test:prepare:pnpm"
+    "test:prepare": "npm run test:prepare:npm-basic && npm run test:prepare:yarn-workspaces && npm run test:prepare:yarn-workspaces-symlinks && npm run test:prepare:webpack-4 && npm run test:prepare:webpack-4-symlinks && npm run test:prepare:pnpm"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/martpie/next-transpile-modules.git"
+    "url": "git+https://github.com/module-federation/next-transpile-modules.git"
   },
   "bugs": {
-    "url": "https://github.com/martpie/next-transpile-modules/issues"
+    "url": "https://github.com/module-federation/next-transpile-modules/issues"
   },
-  "homepage": "https://github.com/martpie/next-transpile-modules#readme",
+  "homepage": "https://github.com/module-federation/next-transpile-modules#readme",
   "keywords": [
     "next",
     "next.js",
@@ -64,6 +69,7 @@
     "prettier-eslint": "^12.0.0",
     "puppeteer": "^5.5.0",
     "rewire": "^4.0.1",
+    "typescript": "^3.9.7",
     "webpack": "^4.44.0"
   }
 }

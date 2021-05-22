@@ -2,3 +2,4 @@ node_modules
 .next
 .idea
 yarn.lock
+src/next-transpile-modules.d.ts

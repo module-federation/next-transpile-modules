@@ -32,7 +32,7 @@ A clear and concise description of what you expected to happen.
 - Operating System:
 - Webpack 4 or 5:
 
-<!-- if applicable, please add your next.config.js, information about the package you are trying to transpile, logs, worskapces/lerna, anything that can help -->
+<!-- if applicable, please add your next.config.js, information about the package you are trying to transpile, debug logs (CF. README), workspaces/lerna, anything that can help -->
 
 **Additional context**
 Add any other context about the problem here.

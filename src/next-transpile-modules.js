@@ -1,7 +1,7 @@
 /**
  * disclaimer:
  *
- * THIS PLUGIN IS A F*CKING BIG HACK.
+ * THIS PLUGIN IS A BIG HACK.
  *
  * don't even try to reason about the quality of the following lines of code.
  */
@@ -52,20 +52,26 @@ const createLogger = (enable) => {
 
 /**
  * Matcher function for webpack to decide which modules to transpile
+ * TODO: could be simplified
+ *
  * @param {string[]} modulesToTranspile
  * @param {function} logger
  * @returns {(path: string) => boolean}
  */
 const createWebpackMatcher = (modulesToTranspile, logger = createLogger(false)) => {
+  // create an array of tuples with each passed in module to transpile and its node_modules depth
+  // example: ['/full/path/to/node_modules/button/node_modules/icon', 2]
+  const modulePathsWithDepth = modulesToTranspile.map((modulePath) => [
+    modulePath,
+    (modulePath.match(/node_modules/g) || []).length,
+  ]);
+
   return (filePath) => {
-    const isNestedNodeModules = (filePath.match(/node_modules/g) || []).length > 1;
+    const nodeModulesDepth = (filePath.match(/node_modules/g) || []).length;
 
-    if (isNestedNodeModules) {
-      return false;
-    }
-
-    return modulesToTranspile.some((modulePath) => {
-      const transpiled = filePath.startsWith(modulePath);
+    return modulePathsWithDepth.some(([modulePath, moduleDepth]) => {
+      // Ensure we aren't implicitly transpiling nested dependencies by comparing depths of modules to be transpiled and the module being checked
+      const transpiled = filePath.startsWith(modulePath) && nodeModulesDepth === moduleDepth;
       if (transpiled) logger(`transpiled: ${filePath}`);
       return transpiled;
     });
@@ -81,8 +87,7 @@ const withTmInitializer = (modules = [], options = {}) => {
   const withTM = (nextConfig = {}) => {
     if (modules.length === 0) return nextConfig;
 
-    // IMPROVE ME: false should not be the default for this option
-    const resolveSymlinks = options.resolveSymlinks || false;
+    const resolveSymlinks = 'resolveSymlinks' in options ? options.resolveSymlinks : true;
     const isWebpack5 = (nextConfig.future && nextConfig.future.webpack5) || false;
     const debug = options.debug || false;
 
@@ -98,7 +103,49 @@ const withTmInitializer = (modules = [], options = {}) => {
       mainFields: ['main', 'module', 'source'],
       // Is it right? https://github.com/webpack/enhanced-resolve/issues/283#issuecomment-775162497
       conditionNames: ['require'],
+      exportsFields: [], // we do that because 'package.json' is usually not present in exports
     });
+
+    /**
+     * Deprecated require.resolve
+     * @deprecated
+     */
+    const deprecatedResolve = enhancedResolve.create.sync({
+      symlinks: resolveSymlinks,
+      extensions: ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.css', '.scss', '.sass'],
+      mainFields: ['main', 'module', 'source'],
+      // Is it right? https://github.com/webpack/enhanced-resolve/issues/283#issuecomment-775162497
+      conditionNames: ['require'],
+    });
+
+    /**
+     * Deprecated getPackageRootDirectory
+     * @deprecated
+     */
+    const deprecatedGetPackageRootDirectory = (module) => {
+      let packageLookupDirectory;
+      let packageRootDirectory;
+
+      // Get the module path
+      packageLookupDirectory = deprecatedResolve(CWD, module);
+
+      // Get the location of its package.json
+      const packageJsonPath = escalade(packageLookupDirectory, (_dir, names) => {
+        if (names.includes('package.json')) {
+          return 'package.json';
+        }
+        return false;
+      });
+
+      if (packageJsonPath == null) {
+        throw new Error(
+          `next-transpile-modules - an error happened when trying to get the root directory of "${module}". Is it missing a package.json?\n${err}`
+        );
+      }
+      packageRootDirectory = path.dirname(packageJsonPath);
+
+      return packageRootDirectory;
+    };
 
     /**
      * Return the root path (package.json directory) of a given module
@@ -106,45 +153,36 @@ const withTmInitializer = (modules = [], options = {}) => {
      * @returns {string}
      */
     const getPackageRootDirectory = (module) => {
-      let packageDirectory;
+      let packageLookupDirectory;
       let packageRootDirectory;
 
       try {
-        // Get the module path
-        packageDirectory = resolve(CWD, module);
-
-        if (!packageDirectory) {
-          throw new Error(
-            `next-transpile-modules - could not resolve module "${module}". Are you sure the name of the module you are trying to transpile is correct?`
-          );
-        }
-
-        // Get the location of its package.json
-        const pkgPath = escalade(packageDirectory, (dir, names) => {
-          if (names.includes('package.json')) {
-            return 'package.json';
-          }
-          return false;
-        });
-        if (pkgPath == null) {
-          throw new Error(
-            `next-transpile-modules - an error happened when trying to get the root directory of "${module}". Is it missing a package.json?\n${err}`
-          );
-        }
-        packageRootDirectory = path.dirname(pkgPath);
+        packageLookupDirectory = resolve(CWD, path.join(module, 'package.json'));
+        packageRootDirectory = path.dirname(packageLookupDirectory);
       } catch (err) {
-        throw new Error(
-          `next-transpile-modules - an unexpected error happened when trying to resolve "${module}"\n${err}`
-        );
+        // DEPRECATED: previous lookup for specific modules, it's confusing, and
+        // will be removed in a next major version
+        try {
+          logger(
+            `DEPRECATED - fallbacking to previous module resolution system for module "${module}", you can now just pass the name of the package to transpile and it will detect its real path without you having to pass a sub-module.`,
+            true
+          );
+
+          packageRootDirectory = deprecatedGetPackageRootDirectory(module);
+        } catch (err) {
+          throw new Error(
+            `next-transpile-modules - an unexpected error happened when trying to resolve "${module}". Are you sure the name module you are trying to transpile is correct, and it has a "main" or an "exports" field?\n${err}`
+          );
+        }
       }
 
       return packageRootDirectory;
     };
 
+    logger(`trying to resolve the following modules:\n${modules.map((mod) => `  - ${mod}`).join('\n')}`);
+
     // Resolve modules to their real paths
     const modulesPaths = modules.map(getPackageRootDirectory);
-
-    if (isWebpack5) logger(`WARNING experimental Webpack 5 support enabled`, true);
 
     logger(`the following paths will get transpiled:\n${modulesPaths.map((mod) => `  - ${mod}`).join('\n')}`);
 
@@ -160,7 +198,6 @@ const withTmInitializer = (modules = [], options = {}) => {
             'This plugin is not compatible with Next.js versions below 5.0.0 https://err.sh/next-plugins/upgrade'
           );
         }
-
         if (resolveSymlinks !== undefined) {
           // Avoid Webpack to resolve transpiled modules path to their real path as
           // we want to test modules from node_modules only. If it was enabled,
@@ -174,7 +211,7 @@ const withTmInitializer = (modules = [], options = {}) => {
           // If we the code requires/import an absolute path
           if (!request.startsWith('.')) {
             try {
-              const moduleDirectory = getPackageRootDirectory(request);
+              const moduleDirectory = deprecatedGetPackageRootDirectory(request);
 
               if (!moduleDirectory) return false;
 
@@ -225,6 +262,7 @@ const withTmInitializer = (modules = [], options = {}) => {
             test: /\.+(js|jsx|mjs|ts|tsx)$/,
             use: options.defaultLoaders.babel,
             include: matcher,
+            type: 'javascript/auto',
           });
 
           if (resolveSymlinks === false) {
@@ -270,6 +308,34 @@ const withTmInitializer = (modules = [], options = {}) => {
             delete nextSassLoader.issuer.and;
           } else {
             console.warn('next-transpile-modules - could not find default SASS rule, SASS imports may not work');
+          }
+        }
+
+        // Add support for Global CSS imports in transpiled modules
+        if (nextCssLoaders) {
+          const nextGlobalCssLoader = nextCssLoaders.oneOf.find(
+            (rule) => rule.sideEffects === true && regexEqual(rule.test, /(?<!\.module)\.css$/)
+          );
+
+          if (nextGlobalCssLoader) {
+            nextGlobalCssLoader.issuer = { or: [matcher, nextGlobalCssLoader.issuer] };
+            nextGlobalCssLoader.include = { or: [...modulesPaths, nextGlobalCssLoader.include] };
+          } else if (!options.isServer) {
+            // Note that Next.js ignores global CSS imports on the server
+            console.warn('next-transpile-modules - could not find default CSS rule, global CSS imports may not work');
+          }
+
+          const nextGlobalSassLoader = nextCssLoaders.oneOf.find(
+            (rule) => rule.sideEffects === true && regexEqual(rule.test, /(?<!\.module)\.(scss|sass)$/)
+          );
+
+          // FIXME: SASS works only when using a custom _app.js file.
+          // See https://github.com/vercel/next.js/blob/24c3929ec46edfef8fb7462a17edc767a90b5d2b/packages/next/build/webpack/config/blocks/css/index.ts#L211
+          if (nextGlobalSassLoader) {
+            nextGlobalSassLoader.issuer = { or: [matcher, nextGlobalSassLoader.issuer] };
+          } else if (!options.isServer) {
+            // Note that Next.js ignores global SASS imports on the server
+            console.info('next-transpile-modules - global SASS imports only work with a custom _app.js file');
           }
         }
 

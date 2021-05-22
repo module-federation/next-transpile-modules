@@ -1,3 +1,7 @@
-const withTM = require('./next-transpile-modules')(['shared', 'shared-ts', 'shared-ui', 'lodash-es']);
+const withTM = require('./next-transpile-modules')(['shared', 'shared-ts', 'shared-ui', 'lodash-es'], { debug: true });
 
-module.exports = withTM({});
+module.exports = withTM({
+  future: {
+    webpack5: true,
+  },
+});
