@@ -1,8 +1,8 @@
 const npmBasicAppPath = 'src/__tests__/__apps__/npm-basic';
 const yarnWorkspacesAppPath = 'src/__tests__/__apps__/yarn-workspaces/app';
 const yarnWorkspacesSymlinksAppPath = 'src/__tests__/__apps__/yarn-workspaces-symlinks/app';
-const webpack5AppPath = 'src/__tests__/__apps__/webpack-5/app';
-const webpack5SymlinksAppPath = 'src/__tests__/__apps__/webpack-5-symlinks/app';
+const webpack5AppPath = 'src/__tests__/__apps__/webpack-4/app';
+const webpack5SymlinksAppPath = 'src/__tests__/__apps__/webpack-4-symlinks/app';
 const pnpmAppPath = 'src/__tests__/__apps__/pnpm';
 
 module.exports = {

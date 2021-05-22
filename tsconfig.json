@@ -1,0 +1,9 @@
+{
+  "include": ["src/next-transpile-modules.js"],
+  "ignore": ["src/__tests__"],
+  "compilerOptions": {
+    "allowJs": true,
+    "declaration": true,
+    "emitDeclarationOnly": true
+  }
+}

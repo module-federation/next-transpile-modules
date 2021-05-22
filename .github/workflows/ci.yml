@@ -38,11 +38,11 @@ jobs:
       - name: Install tests apps dependencies (npm-basic)
         run: npm ci --prefix=src/__tests__/__apps__/npm-basic
 
-      - name: Install tests apps dependencies (webpack 5)
-        run: yarn --frozen-lockfile --cwd src/__tests__/__apps__/webpack-5
+      - name: Install tests apps dependencies (webpack 4)
+        run: yarn --frozen-lockfile --cwd src/__tests__/__apps__/webpack-4
 
-      - name: Install tests apps dependencies (webpack 5 symlinks)
-        run: yarn --frozen-lockfile --cwd src/__tests__/__apps__/webpack-5-symlinks
+      - name: Install tests apps dependencies (webpack 4 symlinks)
+        run: yarn --frozen-lockfile --cwd src/__tests__/__apps__/webpack-4-symlinks
 
       - name: Install tests apps dependencies (yarn workspaces)
         run: yarn --frozen-lockfile --cwd src/__tests__/__apps__/yarn-workspaces
@@ -50,7 +50,7 @@ jobs:
       - name: Install tests apps dependencies (yarn workspaces symlinks)
         run: yarn --frozen-lockfile --cwd src/__tests__/__apps__/yarn-workspaces-symlinks
 
-      - name: Install tests apps dependencies (yarn workspaces)
+      - name: Install tests apps dependencies (pnpn workspaces)
         run: npx pnpm i --frozen-lockfile --prefix src/__tests__/__apps__/pnpm
 
       - name: Build test apps

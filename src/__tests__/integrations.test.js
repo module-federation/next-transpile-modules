@@ -90,6 +90,23 @@ describe.each([
     });
   });
 
+  describe('global CSS transpilation', () => {
+    test('pages using transpiled modules should be correctly displayed', async () => {
+      const page = await browser.newPage();
+      const response = await page.goto(`${BASE_URL}/test-global-css`);
+
+      if (!response) throw new Error('Could not access the page');
+
+      expect(response.status()).toBe(200);
+
+      const content = await page.$eval('textarea', (e) => e.textContent);
+      expect(content).toBe('My textarea');
+
+      const className = await page.$eval('textarea', (e) => e.classList[0]);
+      expect(className).toBe('textarea');
+    });
+  });
+
   describe('scss-module transpilation', () => {
     test('pages using transpiled modules should be correctly displayed', async () => {
       const page = await browser.newPage();
@@ -101,6 +118,23 @@ describe.each([
 
       const className = await page.$eval('input', (e) => e.classList[0]);
       expect(className.includes('Input_input__')).toBe(true);
+    });
+  });
+
+  describe('global SASS transpilation', () => {
+    test('pages using transpiled modules should be correctly displayed', async () => {
+      const page = await browser.newPage();
+      const response = await page.goto(`${BASE_URL}/test-global-scss`);
+
+      if (!response) throw new Error('Could not access the page');
+
+      expect(response.status()).toBe(200);
+
+      const content = await page.$eval('textarea', (e) => e.textContent);
+      expect(content).toBe('My alert');
+
+      const className = await page.$eval('textarea', (e) => e.classList[0]);
+      expect(className).toBe('alert');
     });
   });
 });
